@@ -34,7 +34,31 @@ public class Main {
         } catch (IOException e) {
             e.printStackTrace();
         }
-//        System.out.println(inputStream);
+        //System.out.println(inputStream);
+
+        //preprocess, without notation
+        int i=0;
+        StringBuilder stringBuilder=new StringBuilder(inputStream.toString());
+        StringBuilder outInput=new StringBuilder();
+        for(i=0;i<stringBuilder.length();i++){
+            if(stringBuilder.charAt(i)=='/'){
+                if(stringBuilder.charAt(i+1)=='/'){
+                    while (stringBuilder.charAt(i)!='\n'){
+                        i+=1;
+                    }
+                }
+                else if(stringBuilder.charAt(i+1)=='*'){
+                    i+=2;
+                    while (stringBuilder.charAt(i)!='*'&&stringBuilder.charAt(i+1)!='/'){
+                        i+=1;
+                    }
+                    i+=2;
+                }
+            }
+            outInput.append(stringBuilder.charAt(i));
+        }
+        //preprocess over
+        inputStream=CharStreams.fromString(outInput.toString());
         sysyLexer lexer = new sysyLexer(inputStream);
         CommonTokenStream tokenStream = new CommonTokenStream(lexer); // 词法分析获取 token 流
         sysyParser parser = new sysyParser(tokenStream);

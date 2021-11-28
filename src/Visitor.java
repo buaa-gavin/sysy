@@ -160,6 +160,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
             if(register_num==-1){
                 System.exit(-1);
             }
+            useReg=false;
             visit(ctx.exp());
             int value = nodeValue;
             if(useReg){
