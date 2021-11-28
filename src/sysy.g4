@@ -13,9 +13,20 @@ RBRACE: '}';
 RETURN: 'return';
 ADD: '+';
 SUB: '-';
+NOT: '!';
 MUL: '*';
 DIV: '/';
 MOD: '%';
+IF: 'if';
+ELSE: 'else';
+LESS: '<';
+GREATER: '>';
+LESS_OR_EQUAL: '<=';
+GREATER_OR_EQUAL: '>=';
+LOGICAL_EQUAL: '==';
+LOGICAL_NOT_EQUAL: '!=';
+LOGICAL_AND: '&&';
+LOGICAL_OR: '||';
 DECIMAL_CONST: '0' | [1-9]([0-9])*;
 OCTAL_CONST: '0'([0-7])+;
 HEXADECIMAL_CONST:  ('0x' | '0X')([0-9] | [A-F] | [a-f])+;
@@ -40,18 +51,29 @@ functype     : INT;
 block        : LBRACE ( blockitem )* RBRACE;
 blockitem    : decl | stmt;
 stmt         : lval EQUAL exp SEMI
+                | block
                 | (exp)? SEMI
+                | IF LPAREN cond RPAREN stmt (ELSE stmt)?
                 | RETURN exp SEMI;
 lval         : ident;
 exp          : addexp;
+cond         : lorexp;
+unaryexp     : primaryexp | ident LPAREN (funcrparams)? RPAREN | unaryop unaryexp;
+primaryexp   : LPAREN exp RPAREN | lval | number;
+funcrparams  : exp ( DOT exp )*;
+unaryop      : ADD | SUB | NOT;
 addexp       : mulexp
                 | addexp (ADD | SUB) mulexp;
 mulexp       : unaryexp
                 | mulexp (MUL | DIV | MOD) unaryexp;
-unaryexp     : primaryexp | ident LPAREN (funcrparams)? RPAREN | unaryop unaryexp;
-primaryexp   : LPAREN exp RPAREN | lval | number;
-funcrparams  : exp ( DOT exp )*;
-unaryop      : ADD | SUB;
+relexp       : addexp
+                | relexp (LESS | GREATER | LESS_OR_EQUAL | GREATER_OR_EQUAL) addexp;
+eqexp        : relexp
+                | eqexp (LOGICAL_EQUAL | LOGICAL_NOT_EQUAL) relexp;
+landexp      : eqexp
+                | landexp LOGICAL_AND eqexp;
+lorexp       : landexp
+                | lorexp LOGICAL_OR landexp;
 ident        : IDENT;
 number             : decimal_const | octal_const | hexadecimal_const;
 decimal_const      : DECIMAL_CONST;

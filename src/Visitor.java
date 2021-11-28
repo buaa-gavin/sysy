@@ -46,7 +46,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
         this.name="";
         visit(ctx.ident());
         checkRepeat(name,"const");
-        useReg=false;
+//        useReg=false;
         visit(ctx.constinitval());
         if(useReg){
             System.exit(-1);
@@ -89,7 +89,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
         regNumList.set(regNumList.size()-1, register_num+1);
         //有初始值
         if(ctx.children.size() != 1){
-            useReg=false;
+//            useReg=false;
             visit(ctx.initval());
             int value = nodeValue;
             if(useReg){
@@ -111,9 +111,12 @@ public class Visitor extends sysyBaseVisitor<Void>{
     @Override
     public Void visitFuncdef(sysyParser.FuncdefContext ctx) {
         this.name="";
+        regNumList.add(1);
         visit(ctx.ident());
         System.out.print("define dso_local i32 @main()");
+        System.out.println("{");
         visit(ctx.block());
+        System.out.println("}");
         return null;
     }
 
@@ -125,17 +128,15 @@ public class Visitor extends sysyBaseVisitor<Void>{
 
     @Override
     public Void visitBlock(sysyParser.BlockContext ctx) {
-        System.out.println("{");
         ArrayList<Symbol> blockSym= new ArrayList<>();
         this.symStack.push(blockSym);
-        this.regNumList.add(1);
+//        this.regNumList.add(1);
         int i=0;
         for(i=0;i<ctx.blockitem().size();i++){
             visit(ctx.blockitem().get(i));
         }
-        System.out.println("}");
         this.symStack.pop();
-        this.regNumList.remove(regNumList.size()-1);
+//        this.regNumList.remove(regNumList.size()-1);
         return null;
     }
 
@@ -152,7 +153,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
 
     @Override
     public Void visitStmt(sysyParser.StmtContext ctx) {
-        if(ctx.children.size()==4){
+        if(ctx.lval()!=null){
             visit(ctx.lval());
             String curName=name;
             register_num = getReg(curName);
@@ -160,7 +161,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
             if(register_num==-1){
                 System.exit(-1);
             }
-            useReg=false;
+//            useReg=false;
             visit(ctx.exp());
             int value = nodeValue;
             if(useReg){
@@ -171,8 +172,8 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 System.out.println(String.format("store i32 %d, i32* %%%d",value,varReg));
             }
         }
-        else if(ctx.children.size()==3){
-            useReg=false;
+        else if(ctx.RETURN()!=null){
+//            useReg=false;
             visit(ctx.exp());
             System.out.print("ret i32 ");
             if(useReg){
@@ -182,6 +183,10 @@ public class Visitor extends sysyBaseVisitor<Void>{
             else {
                 System.out.println(nodeValue);
             }
+        }
+        else if(ctx.IF()!=null){
+            visit(ctx.cond());
+            visit(ctx.stmt(0));
         }
         else if(ctx.exp()!=null){
             visit(ctx.exp());
@@ -202,6 +207,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
 
     @Override
     public Void visitAddexp(sysyParser.AddexpContext ctx) {
+        useReg=false;
         if(ctx.children.size()==1){
             visit(ctx.mulexp());
         }
@@ -401,7 +407,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                     System.exit(-1);
                 }
                 isReg=false;
-                useReg=false;
+//                useReg=false;
                 visit(ctx.funcrparams());
                 if(useReg){
                     register_num=regNumList.get(regNumList.size()-1)-1;

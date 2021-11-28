@@ -112,17 +112,11 @@ public interface sysyVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitExp(sysyParser.ExpContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link sysyParser#addexp}.
+	 * Visit a parse tree produced by {@link sysyParser#cond}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitAddexp(sysyParser.AddexpContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link sysyParser#mulexp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitMulexp(sysyParser.MulexpContext ctx);
+	T visitCond(sysyParser.CondContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link sysyParser#unaryexp}.
 	 * @param ctx the parse tree
@@ -147,6 +141,42 @@ public interface sysyVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitUnaryop(sysyParser.UnaryopContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link sysyParser#addexp}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitAddexp(sysyParser.AddexpContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link sysyParser#mulexp}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitMulexp(sysyParser.MulexpContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link sysyParser#relexp}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitRelexp(sysyParser.RelexpContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link sysyParser#eqexp}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitEqexp(sysyParser.EqexpContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link sysyParser#landexp}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitLandexp(sysyParser.LandexpContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link sysyParser#lorexp}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitLorexp(sysyParser.LorexpContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link sysyParser#ident}.
 	 * @param ctx the parse tree

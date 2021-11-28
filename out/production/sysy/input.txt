@@ -1,22 +1,11 @@
 int main() {
-    // newline=10;
-    int n;
-    int i;
-    int j;
-    // m = 1478;
-    // int t;
-    i = 4;
-    j = 20;
-    /*wef
-    23f4wg
-    435hghtr4h4r6th4th45    qdwfwerr*/
-    int temp;
-    temp = i;
-    i    = j;
-    j    = temp;
-
-    putint(i);
-    temp = 10;
-    putint(j);
+    int a = getint();
+    int b = getint();
+    if (a <= b) {
+        putint(1);
+    }
+    else {
+        putint(0);
+    }
     return 0;
 }
