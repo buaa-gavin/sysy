@@ -1,0 +1,2 @@
+java -jar antlr-4.9.3-complete.jar sysy.g4 -visitor -no-listener
+java Main input.txt
