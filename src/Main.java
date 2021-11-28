@@ -34,6 +34,7 @@ public class Main {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        System.out.println(inputStream);
         sysyLexer lexer = new sysyLexer(inputStream);
         CommonTokenStream tokenStream = new CommonTokenStream(lexer); // 词法分析获取 token 流
         sysyParser parser = new sysyParser(tokenStream);
