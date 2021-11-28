@@ -21,12 +21,13 @@ public class Main {
                 "    return a1a11a11 - _CHAOS_TOKEN + 000;\n" +
                 "}";
 
-        String filename=args[0];
+
         try {
             System.setOut(new PrintStream(args[1]));
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+        String filename=args[0];
         CharStream inputStream = null; // 获取输入流
         try {
             inputStream = CharStreams.fromFileName(filename);
