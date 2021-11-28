@@ -163,8 +163,8 @@ public class Visitor extends sysyBaseVisitor<Void>{
             visit(ctx.exp());
             int value = nodeValue;
             if(useReg){
-                int valueReg=regNumList.get(regNumList.size()-1)-1;
-                System.out.println(String.format("store i32 %%%d, i32* %%%d",value,varReg));
+                int interReg=regNumList.get(regNumList.size()-1)-1;
+                System.out.println(String.format("store i32 %%%d, i32* %%%d",interReg,varReg));
             }
             else {
                 System.out.println(String.format("store i32 %d, i32* %%%d",value,varReg));
