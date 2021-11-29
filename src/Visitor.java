@@ -210,6 +210,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 System.out.println(String.format("br i1 %%t%d,label %%t%d,label %%t%d",icmpReg,ifReg,retReg));
                 System.out.println(String.format("t%d:",ifReg));
                 visit(ctx.stmt(0));
+                System.out.println(String.format("br label %%t%d",retReg));
                 System.out.println(String.format("t%d:",retReg));
             }
         }
