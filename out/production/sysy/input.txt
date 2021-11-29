@@ -1,11 +1,16 @@
 int main() {
-    int a = getint();
-    int b = getint();
+    int a = 1;
+    int b = 2;
     if (a <= b) {
         putint(1);
     }
-    else {
-        putint(0);
+    else if(!a){
+        a=2-b;
     }
+    else{
+        b = b+2;
+    }
+    putint(a);
+    putint(b);
     return 0;
 }
