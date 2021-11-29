@@ -208,10 +208,10 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 int ifReg=icmpReg+1,retReg=icmpReg+2;
                 regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+2);
                 System.out.println(String.format("br i1 %%t%d,label %%t%d",icmpReg,ifReg));
-                System.out.println(String.format("%d:",ifReg));
+                System.out.println(String.format("t%d:",ifReg));
                 visit(ctx.stmt(0));
                 System.out.println(String.format("br label %%t%d",retReg));
-                System.out.println(String.format("%d:",retReg));
+                System.out.println(String.format("t%d:",retReg));
             }
         }
         else if(ctx.block()!=null){
@@ -674,7 +674,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 System.out.println(String.format("%%t%d = icmp ne i32 %%t%d, 0",register_num,register_num-1));
                 regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
             }
-            leftReg=regNumList.get(regNumList.size()-1);
+            leftReg=regNumList.get(regNumList.size()-1)-1;
             singleBool=true;
             visit(ctx.eqexp());
             if(singleBool){
@@ -682,7 +682,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 System.out.println(String.format("%%t%d = icmp ne i32 %%t%d, 0",register_num,register_num-1));
                 regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
             }
-            rightReg=regNumList.get(regNumList.size()-1);
+            rightReg=regNumList.get(regNumList.size()-1)-1;
             register_num=regNumList.get(regNumList.size()-1);
             System.out.println(String.format("%%t%d = and i1 %%t%d,%%t%d",register_num,leftReg,rightReg));
             regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
@@ -698,9 +698,9 @@ public class Visitor extends sysyBaseVisitor<Void>{
         else {
             int leftReg,rightReg;
             visit(ctx.lorexp());
-            leftReg=regNumList.get(regNumList.size()-1);
+            leftReg=regNumList.get(regNumList.size()-1)-1;
             visit(ctx.landexp());
-            rightReg=regNumList.get(regNumList.size()-1);
+            rightReg=regNumList.get(regNumList.size()-1)-1;
             register_num=regNumList.get(regNumList.size()-1);
             System.out.println(String.format("%%t%d = or i1 %%t%d,%%t%d",register_num,leftReg,rightReg));
             regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
