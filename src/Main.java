@@ -59,9 +59,10 @@ public class Main {
         }
         //preprocess over
         inputStream=CharStreams.fromString(outInput.toString());
-        sysyLexer lexer = new sysyLexer(inputStream);
+        errorSysyLexer lexer = new errorSysyLexer(inputStream);
         CommonTokenStream tokenStream = new CommonTokenStream(lexer); // 词法分析获取 token 流
         sysyParser parser = new sysyParser(tokenStream);
+        parser.setErrorHandler(new errorStrategy());
         ParseTree tree = parser.compunit(); // 获取语法树的根节点
         PreVisit preVisit=new PreVisit();
         preVisit.visit(tree);

@@ -8,17 +8,25 @@ public class Visitor extends sysyBaseVisitor<Void>{
     private boolean isReg;
     private boolean useReg;//整个表达式有没有用到register
     private boolean singleBool;//是否是单个表达式
+    private boolean defGlobal;//是否正在定义全局变量
     private String sign;
     private String type = "";
     private String name = "";
     private Stack<ArrayList<Symbol>> symStack = new Stack<>(); //符号栈，arraylist存Symbol类的符号
     private Stack<String> typeStack = new Stack<>();
     private ArrayList<Integer> regNumList=new ArrayList<>(); //不同作用域有不同寄存器，相互独立，与symstack平行使用
+    private ArrayList<Symbol> globalSym=new ArrayList<>();
 
     @Override
     public Void visitCompunit(sysyParser.CompunitContext ctx) {
         // 调用默认的 visit 方法即可
-        return super.visitCompunit(ctx);
+        defGlobal=true;
+        for(int i=0;i<ctx.decl().size();i++){
+            visit(ctx.decl(i));
+        }
+        defGlobal=false;
+        visit(ctx.funcdef());
+        return null;
     }
 
     @Override
@@ -45,6 +53,18 @@ public class Visitor extends sysyBaseVisitor<Void>{
 
     @Override
     public Void visitConstdef(sysyParser.ConstdefContext ctx) {
+        //正在定义全局常量
+        if(defGlobal){
+            this.name="";
+            visit(ctx.ident());
+            String constGlobalName=name;
+            visit(ctx.constinitval());
+            globalSym.add(new Symbol(constGlobalName,"const",-1));
+            int value=nodeValue;
+            globalSym.get(globalSym.size()-1).setValue(value);
+            return null;
+        }
+        //局部变量部分
         this.name="";
         visit(ctx.ident());
         checkRepeat(name,"const");
@@ -78,6 +98,13 @@ public class Visitor extends sysyBaseVisitor<Void>{
 
     @Override
     public Void visitVardef(sysyParser.VardefContext ctx) {
+        //正在定义全局变量
+        if(defGlobal){
+            this.name="";
+            visit(ctx.ident());
+            String globalVarName=name;
+            return null;
+        }
         //alloca部分 声明
         this.name="";
         visit(ctx.ident());
@@ -489,6 +516,12 @@ public class Visitor extends sysyBaseVisitor<Void>{
             visit(ctx.exp());
         }
         else if(ctx.lval()!=null){
+            if(defGlobal){
+                if(!checkGlobalConst(ctx.lval().ident().IDENT().getText())){
+                    //全局变量是常量表达式
+                    System.exit(-1);
+                }
+            }
             if(!checkConst(ctx.lval().ident().IDENT().getText())){
                 //是变量，要load
                 isReg=true;
@@ -805,19 +838,8 @@ public class Visitor extends sysyBaseVisitor<Void>{
         return -1;
     }
 
-    public void changeValue(String str, int value){
-        int i,j;
-        for (i=symStack.size()-1;i>=0;i--){
-            ArrayList<Symbol> tmp=symStack.get(i);
-            for(j=tmp.size()-1;j>=0;j--){
-                if(str.equals(tmp.get(j).getSymName())){
-                    tmp.get(j).setValue(value);
-                    return;
-                }
-            }
-        }
-    }
 
+    //ident时候用，看一个字符串是不是常量
     public boolean checkConst(String str){
         int i,j;
         for (i=symStack.size()-1;i>=0;i--){
@@ -831,6 +853,27 @@ public class Visitor extends sysyBaseVisitor<Void>{
             }
         }
         return false;
+    }
+
+    public boolean checkGlobalConst(String str){
+        int i;
+        for(i=globalSym.size()-1;i>=0;i--){
+            if(str.equals(globalSym.get(i).getSymName()) && globalSym.get(i).getType().equals("const")){
+                //顺便赋值了
+                nodeValue=globalSym.get(i).getValue();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void checkGlobalRepeat(String checkName,String checkType){
+        int i;
+        for(i=globalSym.size()-1;i>=0;i--){
+            if(checkName.equals(globalSym.get(i).getSymName()) && checkType.equals(globalSym.get(i).getType())){
+                System.exit(-1);
+            }
+        }
     }
 
 
