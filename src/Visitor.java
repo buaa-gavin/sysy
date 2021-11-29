@@ -200,18 +200,32 @@ public class Visitor extends sysyBaseVisitor<Void>{
             String curName=name;
             register_num = getReg(curName);
             int varReg=register_num;
-            if(register_num==-1){
-                System.exit(-1);
+            String leftGlobal="";
+            if(varReg==-1){
+                leftGlobal=getGlobalReg(curName);
+                if(leftGlobal==null){
+                    System.exit(-1);
+                }
             }
 //            useReg=false;
             visit(ctx.exp());
             int value = nodeValue;
             if(useReg){
                 int interReg=regNumList.get(regNumList.size()-1)-1;
-                System.out.println(String.format("store i32 %%t%d, i32* %%t%d",interReg,varReg));
+                if(!leftGlobal.equals("")){
+                    System.out.println(String.format("store i32 %%t%d, i32* @%s",interReg,leftGlobal));
+                }
+                else {
+                    System.out.println(String.format("store i32 %%t%d, i32* %%t%d",interReg,varReg));
+                }
             }
             else {
-                System.out.println(String.format("store i32 %d, i32* %%t%d",value,varReg));
+                if(!leftGlobal.equals("")){
+                    System.out.println(String.format("store i32 %d, i32* @%s",value,leftGlobal));
+                }
+                else {
+                    System.out.println(String.format("store i32 %d, i32* %%t%d",value,varReg));
+                }
             }
         }
         else if(ctx.RETURN()!=null){
