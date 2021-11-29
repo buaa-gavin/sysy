@@ -1,14 +1,8 @@
+const int a = 6;
+int b = a + 1;
 int main() {
-    int a;
-    a = 5d;
-    int b;
-    b = 10;
-    if (a == 5)
-        if (b == 10)
-            a = 25;
-        else
-            a = a + 15;
-
-    putint((a));
+    int c = b;
+    int b = 8;
+    putint(b + c);
     return 0;
 }

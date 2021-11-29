@@ -103,6 +103,19 @@ public class Visitor extends sysyBaseVisitor<Void>{
             this.name="";
             visit(ctx.ident());
             String globalVarName=name;
+            checkGlobalRepeat(globalVarName,"var");
+            int globalVarValue;
+            if(ctx.initval()==null){
+                globalVarValue=0;
+            }
+            else {
+                visit(ctx.initval());
+                globalVarValue=nodeValue;
+            }
+            System.out.println(String.format("@%s = global i32 %d", globalVarName,globalVarValue));
+            Symbol globalVar=new Symbol(globalVarName,"var",-1);
+            globalVar.setValue(globalVarValue);
+            globalSym.add(globalVar);
             return null;
         }
         //alloca部分 声明
@@ -268,17 +281,21 @@ public class Visitor extends sysyBaseVisitor<Void>{
             visit(ctx.mulexp());
         }
         else {
-            int left,right,ans,leftNum,rightNum;
+            int left,right,ans,leftNum=0,rightNum=0;
             boolean leftReg,rightReg;
             visit(ctx.addexp());
             left=nodeValue;
             leftReg=isReg;
             //取最近的寄存器值
-            leftNum=regNumList.get(regNumList.size()-1)-1;
+            if(regNumList.size()>0){
+                leftNum=regNumList.get(regNumList.size()-1)-1;
+            }
             visit(ctx.mulexp());
             right=nodeValue;
             rightReg=isReg;
-            rightNum=regNumList.get(regNumList.size()-1)-1;
+            if(regNumList.size()>0){
+                rightNum=regNumList.get(regNumList.size()-1)-1;
+            }
             isReg=true;
             if(ctx.ADD()!=null){
                 if(leftReg&&rightReg){
@@ -331,16 +348,20 @@ public class Visitor extends sysyBaseVisitor<Void>{
             visit(ctx.unaryexp());
         }
         else {
-            int left,right,ans,leftNum,rightNum;
+            int left,right,ans,leftNum=0,rightNum=0;
             boolean leftReg,rightReg;
             visit(ctx.mulexp());
             left=nodeValue;
             leftReg=isReg;
-            leftNum=regNumList.get(regNumList.size()-1)-1;
+            if(regNumList.size()>0){
+                leftNum=regNumList.get(regNumList.size()-1)-1;
+            }
             visit(ctx.unaryexp());
             right=nodeValue;
             rightReg=isReg;
-            rightNum=regNumList.get(regNumList.size()-1)-1;
+            if(regNumList.size()>0){
+                rightNum=regNumList.get(regNumList.size()-1)-1;
+            }
             isReg=true;
             if(ctx.MUL()!=null){
                 if(leftReg&&rightReg){
@@ -521,14 +542,23 @@ public class Visitor extends sysyBaseVisitor<Void>{
                     //全局变量是常量表达式
                     System.exit(-1);
                 }
+                return null;
             }
-            if(!checkConst(ctx.lval().ident().IDENT().getText())){
+            //既不是全局常量也不是局部常量，说明是变量
+            if(!checkConst(ctx.lval().ident().IDENT().getText())&&!checkGlobalConst(ctx.lval().ident().IDENT().getText())){
                 //是变量，要load
                 isReg=true;
                 useReg=true;
                 register_num = regNumList.get(regNumList.size()-1);
-                int varReg=getReg(ctx.lval().ident().IDENT().getText());
-                System.out.println(String.format("%%t%d = load i32, i32* %%t%d", register_num, varReg));
+                String identName=ctx.lval().ident().IDENT().getText();
+                int varReg=getReg(identName);
+                if(varReg==-1){
+                    String gloReg=getGlobalReg(identName);
+                    System.out.println(String.format("%%t%d = load i32, i32* @%s", register_num, gloReg));
+                }
+                else {
+                    System.out.println(String.format("%%t%d = load i32, i32* %%t%d", register_num, varReg));
+                }
                 regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
             }
         }
@@ -577,7 +607,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
             int icmpReg=regNumList.get(regNumList.size()-1);
             regNumList.set(regNumList.size()-1, icmpReg+1);
             if(ctx.LESS()!=null){
-                if(leftReg==rightReg){
+                if(leftReg&&rightReg){
                     System.out.println(String.format("%%t%d = icmp slt i32 %%t%d, %%t%d",icmpReg, leftNum, rightNum));
                 }
                 else if(leftReg){
@@ -591,7 +621,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 }
             }
             else if(ctx.GREATER()!=null){
-                if(leftReg==rightReg){
+                if(leftReg&&rightReg){
                     System.out.println(String.format("%%t%d = icmp sgt i32 %%t%d, %%t%d",icmpReg, leftNum, rightNum));
                 }
                 else if(leftReg){
@@ -605,7 +635,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 }
             }
             else if(ctx.LESS_OR_EQUAL()!=null){
-                if(leftReg==rightReg){
+                if(leftReg&&rightReg){
                     System.out.println(String.format("%%t%d = icmp sle i32 %%t%d, %%t%d",icmpReg, leftNum, rightNum));
                 }
                 else if(leftReg){
@@ -619,7 +649,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 }
             }
             else if(ctx.GREATER_OR_EQUAL()!=null){
-                if(leftReg==rightReg){
+                if(leftReg&&rightReg){
                     System.out.println(String.format("%%t%d = icmp sge i32 %%t%d, %%t%d",icmpReg, leftNum, rightNum));
                 }
                 else if(leftReg){
@@ -656,7 +686,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
             int icmpReg=regNumList.get(regNumList.size()-1);
             regNumList.set(regNumList.size()-1, icmpReg+1);
             if(ctx.LOGICAL_EQUAL()!=null){
-                if(leftReg==rightReg){
+                if(leftReg&&rightReg){
                     System.out.println(String.format("%%t%d = icmp eq i32 %%t%d, %%t%d",icmpReg, leftNum, rightNum));
                 }
                 else if(leftReg){
@@ -670,7 +700,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 }
             }
             else if(ctx.LOGICAL_NOT_EQUAL()!=null){
-                if(leftReg==rightReg){
+                if(leftReg&&rightReg){
                     System.out.println(String.format("%%t%d = icmp ne i32 %%t%d, %%t%d",icmpReg, leftNum, rightNum));
                 }
                 else if(leftReg){
@@ -836,6 +866,16 @@ public class Visitor extends sysyBaseVisitor<Void>{
             }
         }
         return -1;
+    }
+
+    public String getGlobalReg(String str){
+        int i;
+        for(i=globalSym.size()-1;i>=0;i--){
+            if(str.equals(globalSym.get(i).getSymName())&&globalSym.get(i).getType().equals("var")){
+                return globalSym.get(i).getSymName();
+            }
+        }
+        return null;
     }
 
 
