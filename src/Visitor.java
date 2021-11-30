@@ -767,12 +767,12 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 register_num=regNumList.get(regNumList.size()-1);
                 if(useReg){
                     System.out.println(String.format("%%t%d = icmp ne i32 %%t%d, 0",register_num,register_num-1));
-                    regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
                 }
                 else {
                     int value=nodeValue;
                     System.out.println(String.format("%%t%d = icmp ne i32 %d, 0",register_num,value));
                 }
+                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
             }
         }
         else {
@@ -783,12 +783,12 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 register_num=regNumList.get(regNumList.size()-1);
                 if(useReg){
                     System.out.println(String.format("%%t%d = icmp ne i32 %%t%d, 0",register_num,register_num-1));
-                    regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
                 }
                 else {
                     int value=nodeValue;
                     System.out.println(String.format("%%t%d = icmp ne i32 %d, 0",register_num,value));
                 }
+                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
             }
             leftReg=regNumList.get(regNumList.size()-1)-1;
             singleBool=true;
@@ -797,12 +797,12 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 register_num=regNumList.get(regNumList.size()-1);
                 if(useReg){
                     System.out.println(String.format("%%t%d = icmp ne i32 %%t%d, 0",register_num,register_num-1));
-                    regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
                 }
                 else {
                     int value=nodeValue;
                     System.out.println(String.format("%%t%d = icmp ne i32 %d, 0",register_num,value));
                 }
+                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
             }
             rightReg=regNumList.get(regNumList.size()-1)-1;
             register_num=regNumList.get(regNumList.size()-1);
