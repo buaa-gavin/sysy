@@ -10,6 +10,8 @@ LPAREN: '(';
 RPAREN: ')';
 LBRACE: '{';
 RBRACE: '}';
+LBRACKET: '[';
+RBRACKET: ']';
 RETURN: 'return';
 ADD: '+';
 SUB: '-';
@@ -42,13 +44,15 @@ compunit     : (decl)* funcdef;
 decl         : constdecl | vardecl;
 constdecl    : CONST btype constdef ( DOT constdef )* SEMI;
 btype        : INT;
-constdef     : ident EQUAL constinitval;
-constinitval : constexp;
+constdef     : ident ( LBRACKET constexp RBRACKET )* EQUAL constinitval;
+constinitval : constexp
+                | LBRACE ( constinitval ( DOT constinitval )* )? RBRACE;
 constexp     : addexp;
 vardecl      : btype vardef ( DOT vardef )* SEMI;
-vardef       : ident
-                | ident EQUAL initval;
-initval      : exp ;
+vardef       : ident ( LBRACKET constexp RBRACKET )*
+                | ident ( LBRACKET constexp RBRACKET )* EQUAL initval;
+initval      : exp
+                | LBRACE ( initval ( DOT initval )* )? RBRACE;
 funcdef      : functype ident LPAREN RPAREN block; // 保证当前 ident 只为 "Main"
 functype     : INT;
 block        : LBRACE ( blockitem )* RBRACE;
@@ -61,7 +65,7 @@ stmt         : lval EQUAL exp SEMI
                 | BREAK SEMI
                 | CONTINUE SEMI
                 | RETURN exp SEMI;
-lval         : ident;
+lval         : ident ( LBRACKET exp RBRACKET )*;
 exp          : addexp;
 cond         : lorexp;
 unaryexp     : primaryexp | ident LPAREN (funcrparams)? RPAREN | unaryop unaryexp;

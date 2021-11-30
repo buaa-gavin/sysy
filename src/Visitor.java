@@ -765,8 +765,14 @@ public class Visitor extends sysyBaseVisitor<Void>{
             visit(ctx.eqexp());
             if(singleBool){
                 register_num=regNumList.get(regNumList.size()-1);
-                System.out.println(String.format("%%t%d = icmp ne i32 %%t%d, 0",register_num,register_num-1));
-                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                if(useReg){
+                    System.out.println(String.format("%%t%d = icmp ne i32 %%t%d, 0",register_num,register_num-1));
+                    regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                }
+                else {
+                    int value=nodeValue;
+                    System.out.println(String.format("%%t%d = icmp ne i32 %d, 0",register_num,value));
+                }
             }
         }
         else {
@@ -775,16 +781,28 @@ public class Visitor extends sysyBaseVisitor<Void>{
             visit(ctx.landexp());
             if(singleBool){
                 register_num=regNumList.get(regNumList.size()-1);
-                System.out.println(String.format("%%t%d = icmp ne i32 %%t%d, 0",register_num,register_num-1));
-                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                if(useReg){
+                    System.out.println(String.format("%%t%d = icmp ne i32 %%t%d, 0",register_num,register_num-1));
+                    regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                }
+                else {
+                    int value=nodeValue;
+                    System.out.println(String.format("%%t%d = icmp ne i32 %d, 0",register_num,value));
+                }
             }
             leftReg=regNumList.get(regNumList.size()-1)-1;
             singleBool=true;
             visit(ctx.eqexp());
             if(singleBool){
                 register_num=regNumList.get(regNumList.size()-1);
-                System.out.println(String.format("%%t%d = icmp ne i32 %%t%d, 0",register_num,register_num-1));
-                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                if(useReg){
+                    System.out.println(String.format("%%t%d = icmp ne i32 %%t%d, 0",register_num,register_num-1));
+                    regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                }
+                else {
+                    int value=nodeValue;
+                    System.out.println(String.format("%%t%d = icmp ne i32 %d, 0",register_num,value));
+                }
             }
             rightReg=regNumList.get(regNumList.size()-1)-1;
             register_num=regNumList.get(regNumList.size()-1);
