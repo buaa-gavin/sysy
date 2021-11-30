@@ -19,6 +19,9 @@ DIV: '/';
 MOD: '%';
 IF: 'if';
 ELSE: 'else';
+WHILE: 'while';
+BREAK: 'break';
+CONTINUE: 'continue';
 LESS: '<';
 GREATER: '>';
 LESS_OR_EQUAL: '<=';
@@ -54,6 +57,9 @@ stmt         : lval EQUAL exp SEMI
                 | block
                 | (exp)? SEMI
                 | IF LPAREN cond RPAREN stmt (ELSE stmt)?
+                | WHILE LPAREN cond RPAREN stmt
+                | BREAK SEMI
+                | CONTINUE SEMI
                 | RETURN exp SEMI;
 lval         : ident;
 exp          : addexp;

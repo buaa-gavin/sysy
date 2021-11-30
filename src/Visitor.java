@@ -14,6 +14,8 @@ public class Visitor extends sysyBaseVisitor<Void>{
     private String name = "";
     private Stack<ArrayList<Symbol>> symStack = new Stack<>(); //符号栈，arraylist存Symbol类的符号
     private Stack<String> typeStack = new Stack<>();
+    private Stack<Integer> beginStack=new Stack<>();
+    private Stack<Integer> endStack=new Stack<>();
     private ArrayList<Integer> regNumList=new ArrayList<>(); //不同作用域有不同寄存器，相互独立，与symstack平行使用
     private ArrayList<Symbol> globalSym=new ArrayList<>();
 
@@ -270,6 +272,31 @@ public class Visitor extends sysyBaseVisitor<Void>{
         }
         else if(ctx.block()!=null){
             visit(ctx.block());
+        }
+        else if(ctx.WHILE()!=null){
+            int whileReg=regNumList.get(regNumList.size()-1);
+            regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+            beginStack.push(whileReg);
+            System.out.println(String.format("br label %%t%d",whileReg));
+            System.out.println(String.format("t%d:",whileReg));
+            visit(ctx.cond());
+            int icmpReg=regNumList.get(regNumList.size()-1)-1;
+            int stmtReg=icmpReg+1,endReg=icmpReg+2;
+            endStack.push(endReg);
+            regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+2);
+            System.out.println(String.format("br i1 %%t%d,label %%t%d,label %%t%d",icmpReg,stmtReg,endReg));
+            System.out.println(String.format("t%d:",stmtReg));
+            visit(ctx.stmt(0));
+            System.out.println(String.format("br label %%t%d",whileReg));
+            System.out.println(String.format("t%d:",endReg));
+            beginStack.pop();
+            endStack.pop();
+        }
+        else if(ctx.BREAK()!=null){
+            System.out.println(String.format("br label %%t%d",endStack.peek()));
+        }
+        else if(ctx.CONTINUE()!=null){
+            System.out.println(String.format("br label %%t%d",beginStack.peek()));
         }
         else if(ctx.exp()!=null){
             visit(ctx.exp());
