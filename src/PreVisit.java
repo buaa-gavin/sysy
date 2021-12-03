@@ -20,8 +20,11 @@ public class PreVisit extends sysyBaseVisitor<Void>{
         if(ctx.LBRACKET()!=null && !flagArray){
             System.out.println("declare void @memset(i32*, i32, i32)");
             flagArray=true;
+            return null;
         }
-        return null;
+        else {
+            return super.visitVardef(ctx);
+        }
     }
 
     @Override
@@ -67,8 +70,7 @@ public class PreVisit extends sysyBaseVisitor<Void>{
 
     @Override
     public Void visitIdent(sysyParser.IdentContext ctx){
-        String str=ctx.IDENT().getText();
-        name=str;
+        name= ctx.IDENT().getText();
         return null;
     }
 }
