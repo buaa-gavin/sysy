@@ -86,7 +86,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 }
                 globalSym.add(constArraySymbol);
                 //看初始化情况
-                if(ctx.constinitval().constinitval()==null){
+                if(ctx.constinitval().constinitval(0)==null){
                     //全0
                     System.out.print(" zeroinitializer");
                 }
@@ -360,7 +360,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 }
                 globalSym.add(globalArraySymbol);
                 //看初始化情况
-                if(ctx.EQUAL()==null){
+                if(ctx.EQUAL()==null||ctx.initval().initval(0)==null){
                     //全0
                     System.out.print(" zeroinitializer");
                 }

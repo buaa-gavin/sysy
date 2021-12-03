@@ -32,6 +32,7 @@ LOGICAL_EQUAL: '==';
 LOGICAL_NOT_EQUAL: '!=';
 LOGICAL_AND: '&&';
 LOGICAL_OR: '||';
+VOID: 'void';
 DECIMAL_CONST: '0' | [1-9]([0-9])*;
 OCTAL_CONST: '0'([0-7])+;
 HEXADECIMAL_CONST:  ('0x' | '0X')([0-9] | [A-F] | [a-f])+;
@@ -53,8 +54,10 @@ vardef       : ident ( LBRACKET constexp RBRACKET )*
                 | ident ( LBRACKET constexp RBRACKET )* EQUAL initval;
 initval      : exp
                 | LBRACE ( initval ( DOT initval )* )? RBRACE;
-funcdef      : functype ident LPAREN RPAREN block; // 保证当前 ident 只为 "Main"
-functype     : INT;
+funcdef      : functype ident LPAREN (funcfparams)? RPAREN block;
+functype     : VOID | INT;
+funcfparams  : funcfparam ( DOT funcfparam )*;
+funcfparam   : btype ident (LBRACKET RBRACKET ( LBRACKET exp RBRACKET )*)?;
 block        : LBRACE ( blockitem )* RBRACE;
 blockitem    : decl | stmt;
 stmt         : lval EQUAL exp SEMI
@@ -64,7 +67,7 @@ stmt         : lval EQUAL exp SEMI
                 | WHILE LPAREN cond RPAREN stmt
                 | BREAK SEMI
                 | CONTINUE SEMI
-                | RETURN exp SEMI;
+                | RETURN (exp)? SEMI;
 lval         : ident ( LBRACKET exp RBRACKET )*;
 exp          : addexp;
 cond         : lorexp;
