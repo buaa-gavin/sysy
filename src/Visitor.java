@@ -786,40 +786,38 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 //全局
                 Symbol arraySymbol=getGlobalArray(identName);
                 thisSymbol=arraySymbol;
-                if(arraySymbol.getBasePointer()==-1){
-                    //还没有basePointer
-                    int setReg = regNumList.get(regNumList.size()-1);
-                    ArrayList<Integer> dimList=arraySymbol.getDimList();
-                    System.out.print(String.format("%%t%d = getelementptr ",setReg));
-                    //两个<ty>
-                    for(i=0;i<dimList.size();i++){
-                        System.out.print(String.format("[%d x ",dimList.get(i)));
-                    }
-                    System.out.print("i32");
-                    for(i=0;i<dimList.size();i++){
-                        System.out.print("]");
-                    }
-                    System.out.print(",");
-                    for(i=0;i<dimList.size();i++){
-                        System.out.print(String.format("[%d x ",dimList.get(i)));
-                    }
-                    System.out.print("i32");
-                    for(i=0;i<dimList.size();i++){
-                        System.out.print("]");
-                    }
-                    System.out.print(String.format("* @%s",arraySymbol.getSymName()));
-                    for(i=0;i<arraySymbol.getDimension()+1;i++){
-                        System.out.print(", i32 0");
-                    }
-                    System.out.println();
-                    arraySymbol.setBasePointer(setReg);
-                    regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                //假定都没有存basePointer
+                int setReg = regNumList.get(regNumList.size()-1);
+                ArrayList<Integer> dimList=arraySymbol.getDimList();
+                System.out.print(String.format("%%t%d = getelementptr ",setReg));
+                //两个<ty>
+                for(i=0;i<dimList.size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
                 }
+                System.out.print("i32");
+                for(i=0;i<dimList.size();i++){
+                    System.out.print("]");
+                }
+                System.out.print(",");
+                for(i=0;i<dimList.size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
+                }
+                System.out.print("i32");
+                for(i=0;i<dimList.size();i++){
+                    System.out.print("]");
+                }
+                System.out.print(String.format("* @%s",arraySymbol.getSymName()));
+                for(i=0;i<arraySymbol.getDimension()+1;i++){
+                    System.out.print(", i32 0");
+                }
+                System.out.println();
+                arraySymbol.setBasePointer(setReg);
+                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
                 //获取basePointer
                 base=arraySymbol.getBasePointer();
             }
             else {
-                //局部
+                //局部,应该都存了
                 Symbol arraySymbol=getArray(identName);
                 thisSymbol=arraySymbol;
                 base=arraySymbol.getBasePointer();

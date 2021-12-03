@@ -49,7 +49,7 @@ public class Main {
                 }
                 else if(stringBuilder.charAt(i+1)=='*'){
                     i+=2;
-                    while (stringBuilder.charAt(i)!='*'&&stringBuilder.charAt(i+1)!='/'){
+                    while (!(stringBuilder.charAt(i)=='*'&&stringBuilder.charAt(i+1)=='/')){
                         i+=1;
                     }
                     i+=2;
@@ -58,6 +58,7 @@ public class Main {
             outInput.append(stringBuilder.charAt(i));
         }
         //preprocess over
+//        System.out.println(outInput);
         inputStream=CharStreams.fromString(outInput.toString());
         errorSysyLexer lexer = new errorSysyLexer(inputStream);
         CommonTokenStream tokenStream = new CommonTokenStream(lexer); // 词法分析获取 token 流
