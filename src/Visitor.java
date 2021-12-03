@@ -5,6 +5,8 @@ import java.util.Stack;
 public class Visitor extends sysyBaseVisitor<Void>{
     private int register_num = 1;
     private int nodeValue;
+    private int braceCount;
+    private int basePointer;//数组[0]的基地址，后面按照一维数组模拟加上去
     private boolean isReg;
     private boolean useReg;//整个表达式有没有用到register
     private boolean singleBool;//是否是单个表达式
@@ -17,7 +19,9 @@ public class Visitor extends sysyBaseVisitor<Void>{
     private Stack<Integer> beginStack=new Stack<>();
     private Stack<Integer> endStack=new Stack<>();
     private ArrayList<Integer> regNumList=new ArrayList<>(); //不同作用域有不同寄存器，相互独立，与symstack平行使用
-    private ArrayList<Symbol> globalSym=new ArrayList<>();
+    private ArrayList<Symbol> globalSym=new ArrayList<>();//全局符号存储
+    private ArrayList<Integer> tmpDimList=new ArrayList<>();
+    private ArrayList<Integer> cntList=new ArrayList<>();//用于在局部数组初始化时计算各维的值
 
     @Override
     public Void visitCompunit(sysyParser.CompunitContext ctx) {
@@ -60,32 +64,261 @@ public class Visitor extends sysyBaseVisitor<Void>{
             this.name="";
             visit(ctx.ident());
             String constGlobalName=name;
-            visit(ctx.constinitval());
-            globalSym.add(new Symbol(constGlobalName,"const",-1));
-            int value=nodeValue;
-            globalSym.get(globalSym.size()-1).setValue(value);
-            return null;
+            if(ctx.LBRACKET(0)!=null){
+                //数组
+                Symbol constArraySymbol=new Symbol(constGlobalName,"const array",-1);
+                int dimension=ctx.LBRACKET().size();
+                constArraySymbol.setDimension(dimension);
+                ArrayList<Integer> dimList=constArraySymbol.getDimList();
+                int i;
+                for(i=0;i<ctx.constexp().size();i++){
+                    visit(ctx.constexp(i));
+                    int value=nodeValue;
+                    dimList.add(value);
+                }
+                System.out.print(String.format("@%s = constant ", constGlobalName));
+                for(i=0;i<ctx.constexp().size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
+                }
+                System.out.print("i32");
+                for(i=0;i<ctx.constexp().size();i++){
+                    System.out.print("]");
+                }
+                globalSym.add(constArraySymbol);
+                //看初始化情况
+                if(ctx.constinitval().constinitval()==null){
+                    //全0
+                    System.out.print(" zeroinitializer");
+                }
+                else {
+                    tmpDimList=dimList;
+                    braceCount=dimension;
+                    //框起来
+                    System.out.print(" [");
+                    visit(ctx.constinitval());
+                    System.out.print("]");
+                }
+                System.out.println();
+            }
+            else {
+                //全局常量，非数组
+                visit(ctx.constinitval());
+                globalSym.add(new Symbol(constGlobalName,"const",-1));
+                int value=nodeValue;
+                globalSym.get(globalSym.size()-1).setValue(value);
+            }
         }
-        //局部变量部分
-        this.name="";
-        visit(ctx.ident());
-        checkRepeat(name,"const");
-//        useReg=false;
-        visit(ctx.constinitval());
-        if(useReg){
-            System.exit(-1);
+        else {
+            //局部常量部分
+            this.name="";
+            visit(ctx.ident());
+            String constName=name;
+            if(ctx.LBRACKET(0)!=null){
+                //局部常量数组
+                int arrayReg=regNumList.get(regNumList.size()-1);
+                System.out.print(String.format("%%t%d = alloca ",arrayReg));
+                Symbol constArraySymbol=new Symbol(constName,"const array",arrayReg);
+                int dimension=ctx.LBRACKET().size();
+                constArraySymbol.setDimension(dimension);
+                ArrayList<Integer> dimList=constArraySymbol.getDimList();
+                int i;
+                int elements=1;
+                for(i=0;i<ctx.constexp().size();i++){
+                    visit(ctx.constexp(i));
+                    int value=nodeValue;
+                    elements*=value;
+                    dimList.add(value);
+                }
+                for(i=0;i<ctx.constexp().size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
+                }
+                System.out.print("i32");
+                for(i=0;i<ctx.constexp().size();i++){
+                    System.out.print("]");
+                }
+                ArrayList<Symbol> curTable=symStack.peek();
+
+                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                System.out.println();
+                //常量，肯定得先置0
+                //先取0地址
+                int setReg=regNumList.get(regNumList.size()-1);
+                System.out.print(String.format("%%t%d = getelementptr ",setReg));
+                //两个<ty>
+                for(i=0;i<ctx.constexp().size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
+                }
+                System.out.print("i32");
+                for(i=0;i<ctx.constexp().size();i++){
+                    System.out.print("]");
+                }
+                System.out.print(",");
+                for(i=0;i<ctx.constexp().size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
+                }
+                System.out.print("i32");
+                for(i=0;i<ctx.constexp().size();i++){
+                    System.out.print("]");
+                }
+                System.out.print(String.format("* %%t%d",arrayReg));
+                for(i=0;i<dimension+1;i++){
+                    System.out.print(", i32 0");
+                }
+                System.out.println();
+                System.out.println(String.format("call void @memset(i32* %%t%d, i32 0, i32 %d) ",setReg,elements*4));
+                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                //初始化
+                cntList.removeAll(cntList);
+                for(i=0;i<dimension;i++){
+                    cntList.add(0);
+                }
+                tmpDimList=dimList;
+                braceCount=dimension;
+                basePointer=setReg;
+                constArraySymbol.setBasePointer(setReg);
+                curTable.add(constArraySymbol);
+                visit(ctx.constinitval());
+            }
+            else {
+                //局部常量
+                checkRepeat(name, "const");
+                visit(ctx.constinitval());
+                if (useReg) {
+                    System.exit(-1);
+                }
+                register_num = -1;
+                ArrayList<Symbol> curTable = symStack.peek();
+                curTable.add(new Symbol(name, "const", register_num));
+                int value = nodeValue;
+                curTable.get(curTable.size() - 1).setValue(value);
+            }
         }
-        register_num = -1;
-        ArrayList<Symbol> curTable=symStack.peek();
-        curTable.add(new Symbol(name, "const", register_num));
-        int value=nodeValue;
-        curTable.get(curTable.size()-1).setValue(value);
         return null;
     }
 
     @Override
     public Void visitConstinitval(sysyParser.ConstinitvalContext ctx) {
-        return super.visitConstinitval(ctx);
+        if(ctx.LBRACE()==null){
+            visit(ctx.constexp());
+        }
+        else if(defGlobal){
+            //全局常量数组初始化
+            int i,j,k;
+            if(ctx.LBRACE()!=null){
+                braceCount-=1;
+            }
+            if(ctx.constinitval(0)!=null&&ctx.constinitval(0).constexp()==null){
+                //还在外层，持续打印外层信息
+                int thisDim=tmpDimList.get(tmpDimList.size()-braceCount-1);
+                for(k=0;k<ctx.constinitval().size();k++){
+                    for(j=0;j<braceCount;j++){
+                        System.out.print(String.format("[%d x ",tmpDimList.get(j+tmpDimList.size()-braceCount)));
+                    }
+                    System.out.print("i32");
+                    for(j=0;j<braceCount;j++){
+                        System.out.print("]");
+                    }
+                    System.out.print(" [");
+                    visit(ctx.constinitval(k));
+                    System.out.print("]");
+                    if(k!=thisDim-1){
+                        System.out.print(", ");
+                    }
+                }
+                if(ctx.constinitval().size()<thisDim){
+                    //补0，用zeroinitializer
+                    for(k=ctx.constinitval().size();k<thisDim;k++){
+                        for(j=0;j<braceCount;j++){
+                            System.out.print(String.format("[%d x ",tmpDimList.get(j+tmpDimList.size()-braceCount)));
+                        }
+                        System.out.print("i32");
+                        for(j=0;j<braceCount;j++){
+                            System.out.print("]");
+                        }
+                        System.out.print(" zeroinitializer");
+                        if(k!=thisDim-1){
+                            System.out.print(", ");
+                        }
+                    }
+                }
+
+            }
+            else {
+                //最内层了,直接打印
+                int thisDim=tmpDimList.get(tmpDimList.size()-1);
+                for(j=0;j<ctx.constinitval().size();j++){
+                    visit(ctx.constinitval(j));
+                    int value=nodeValue;
+                    System.out.print(String.format("i32 %d",value));
+                    if(j!=thisDim-1){
+                        System.out.print(",");
+                    }
+                }
+
+                //补0
+                for(j=ctx.constinitval().size();j<thisDim;j++){
+                    System.out.print("i32 0");
+                    if(j!=thisDim-1){
+                        System.out.print(",");
+                    }
+                }
+            }
+            if(ctx.RBRACE()!=null){
+                braceCount+=1;
+            }
+        }
+        else {
+            //局部常量数组初始化
+            int i,j;
+            if(ctx.LBRACE()!=null){
+                braceCount-=1;
+            }
+            if(ctx.constinitval(0)!=null&&ctx.constinitval(0).constexp()==null){
+                //外层
+                for(i=0;i<ctx.constinitval().size();i++){
+                    visit(ctx.constinitval(i));
+                    int index=cntList.size()-braceCount-1;
+                    int thisDim=cntList.get(index)+1;
+                    //此维+1
+                    cntList.set(index, thisDim);
+                }
+                //归零，比如[0][6]变成[1][0]
+                int index=cntList.size()-braceCount-1;
+                cntList.set(index, 0);
+            }
+            else {
+                int elements=0,dimAll=1;
+                for(i=0;i<tmpDimList.size();i++){
+                    dimAll*=tmpDimList.get(i);
+                }
+                //计算完之前的偏移量
+                for(i=0;i<cntList.size()-1;i++){
+                    //该层的长度乘该层的实际偏移
+                    dimAll/=tmpDimList.get(i);
+                    elements+=cntList.get(i)*dimAll;
+                }
+                for(i=0;i<ctx.constinitval().size();i++){
+                    //定位到元素
+                    int elemReg=regNumList.get(regNumList.size()-1);
+                    System.out.println(String.format("%%t%d = getelementptr i32, i32* %%t%d, i32 %d", elemReg,basePointer,elements+i));
+                    regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                    //赋值
+                    visit(ctx.constinitval(i));
+                    int value=nodeValue;
+                    if(useReg){
+                        int valueReg=regNumList.get(regNumList.size()-1)-1;
+                        System.out.println(String.format("store i32 %%t%d, i32* %%t%d", valueReg,elemReg));
+                    }
+                    else {
+                        System.out.println(String.format("store i32 %d, i32* %%t%d", value,elemReg));
+                    }
+                }
+            }
+            if(ctx.RBRACE()!=null){
+                braceCount+=1;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -105,51 +338,283 @@ public class Visitor extends sysyBaseVisitor<Void>{
             this.name="";
             visit(ctx.ident());
             String globalVarName=name;
-            checkGlobalRepeat(globalVarName,"var");
-            int globalVarValue;
-            if(ctx.initval()==null){
-                globalVarValue=0;
+            if(ctx.LBRACKET(0)!=null){
+                //数组
+                Symbol globalArraySymbol=new Symbol(globalVarName,"var array",-1);
+                int dimension=ctx.LBRACKET().size();
+                globalArraySymbol.setDimension(dimension);
+                ArrayList<Integer> dimList=globalArraySymbol.getDimList();
+                int i;
+                for(i=0;i<ctx.constexp().size();i++){
+                    visit(ctx.constexp(i));
+                    int value=nodeValue;
+                    dimList.add(value);
+                }
+                System.out.print(String.format("@%s = global ", globalVarName));
+                for(i=0;i<ctx.constexp().size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
+                }
+                System.out.print("i32");
+                for(i=0;i<ctx.constexp().size();i++){
+                    System.out.print("]");
+                }
+                globalSym.add(globalArraySymbol);
+                //看初始化情况
+                if(ctx.EQUAL()==null){
+                    //全0
+                    System.out.print(" zeroinitializer");
+                }
+                else {
+                    tmpDimList=dimList;
+                    braceCount=dimension;
+                    //框起来
+                    System.out.print(" [");
+                    visit(ctx.initval());
+                    System.out.print("]");
+                }
+                System.out.println();
+            }
+            else{
+                //定义非数组
+                checkGlobalRepeat(globalVarName,"var");
+                int globalVarValue;
+                if(ctx.initval()==null){
+                    globalVarValue=0;
+                }
+                else {
+                    visit(ctx.initval());
+                    globalVarValue=nodeValue;
+                }
+                System.out.println(String.format("@%s = global i32 %d", globalVarName,globalVarValue));
+                Symbol globalVar=new Symbol(globalVarName,"var",-1);
+                globalVar.setValue(globalVarValue);
+                globalSym.add(globalVar);
+            }
+        }
+        else {
+            //局部变量
+            //alloca部分 声明
+            this.name="";
+            visit(ctx.ident());
+            String varName=name;
+            if(ctx.LBRACKET(0)!=null){
+                //局部变量数组
+                int arrayReg=regNumList.get(regNumList.size()-1);
+                System.out.print(String.format("%%t%d = alloca ",arrayReg));
+                Symbol varArraySymbol=new Symbol(varName,"var array",arrayReg);
+                int dimension=ctx.LBRACKET().size();
+                varArraySymbol.setDimension(dimension);
+                ArrayList<Integer> dimList=varArraySymbol.getDimList();
+                int i;
+                int elements=1;
+                for(i=0;i<ctx.constexp().size();i++){
+                    visit(ctx.constexp(i));
+                    int value=nodeValue;
+                    elements*=value;
+                    dimList.add(value);
+                }
+                for(i=0;i<ctx.constexp().size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
+                }
+                System.out.print("i32");
+                for(i=0;i<ctx.constexp().size();i++){
+                    System.out.print("]");
+                }
+                ArrayList<Symbol> curTable=symStack.peek();
+                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                System.out.println();
+                //不管有没有初始值，先取0地址作为basePointer
+                int setReg=regNumList.get(regNumList.size()-1);
+                System.out.print(String.format("%%t%d = getelementptr ",setReg));
+                //两个<ty>
+                for(i=0;i<ctx.constexp().size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
+                }
+                System.out.print("i32");
+                for(i=0;i<ctx.constexp().size();i++){
+                    System.out.print("]");
+                }
+                System.out.print(",");
+                for(i=0;i<ctx.constexp().size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
+                }
+                System.out.print("i32");
+                for(i=0;i<ctx.constexp().size();i++){
+                    System.out.print("]");
+                }
+                System.out.print(String.format("* %%t%d",arrayReg));
+                for(i=0;i<dimension+1;i++){
+                    System.out.print(", i32 0");
+                }
+                basePointer=setReg;
+                varArraySymbol.setBasePointer(setReg);
+                System.out.println();
+                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                if(ctx.EQUAL()!=null){
+                    //有初始值
+                    System.out.println(String.format("call void @memset(i32* %%t%d, i32 0, i32 %d) ",setReg,elements*4));
+                    cntList.removeAll(cntList);
+                    for(i=0;i<dimension;i++){
+                        cntList.add(0);
+                    }
+                    tmpDimList=dimList;
+                    braceCount=dimension;
+                    visit(ctx.initval());
+                }
+                curTable.add(varArraySymbol);
             }
             else {
-                visit(ctx.initval());
-                globalVarValue=nodeValue;
-            }
-            System.out.println(String.format("@%s = global i32 %d", globalVarName,globalVarValue));
-            Symbol globalVar=new Symbol(globalVarName,"var",-1);
-            globalVar.setValue(globalVarValue);
-            globalSym.add(globalVar);
-            return null;
-        }
-        //alloca部分 声明
-        this.name="";
-        visit(ctx.ident());
-        String varName=name;
-        checkRepeat(varName,"var");
-        register_num = regNumList.get(regNumList.size()-1);
-        System.out.println(String.format("%%t%d = alloca i32", register_num));
-        ArrayList<Symbol> curTable=symStack.peek();
-        curTable.add(new Symbol(varName, "var", register_num));
-        int varReg = register_num;
-        regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
-        //有初始值
-        if(ctx.children.size() != 1){
+                //局部变量
+                checkRepeat(varName,"var");
+                register_num = regNumList.get(regNumList.size()-1);
+                System.out.println(String.format("%%t%d = alloca i32", register_num));
+                ArrayList<Symbol> curTable=symStack.peek();
+                curTable.add(new Symbol(varName, "var", register_num));
+                int varReg = register_num;
+                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                //有初始值
+                if(ctx.children.size() != 1){
 //            useReg=false;
-            visit(ctx.initval());
-            int value = nodeValue;
-            if(useReg){
-                int valueReg=regNumList.get(regNumList.size()-1)-1;
-                System.out.println(String.format("store i32 %%t%d, i32* %%t%d",valueReg,varReg));
+                    visit(ctx.initval());
+                    int value = nodeValue;
+                    if(useReg){
+                        int valueReg=regNumList.get(regNumList.size()-1)-1;
+                        System.out.println(String.format("store i32 %%t%d, i32* %%t%d",valueReg,varReg));
+                    }
+                    else {
+                        System.out.println(String.format("store i32 %d, i32* %%t%d",value,varReg));
+                    }
+                }
             }
-            else {
-                System.out.println(String.format("store i32 %d, i32* %%t%d",value,varReg));
-            }
+
         }
+
         return null;
     }
 
     @Override
     public Void visitInitval(sysyParser.InitvalContext ctx) {
-        return super.visitInitval(ctx);
+        if(ctx.LBRACE()==null){
+            visit(ctx.exp());
+        }
+        else if(defGlobal){
+            //全局变量数组
+            int i,j,k;
+            if(ctx.LBRACE()!=null){
+                braceCount-=1;
+            }
+            if(ctx.initval(0)!=null&&ctx.initval(0).exp()==null){
+                //还在外层，持续打印外层信息
+                int thisDim=tmpDimList.get(tmpDimList.size()-braceCount-1);
+                for(k=0;k<ctx.initval().size();k++){
+                    for(j=0;j<braceCount;j++){
+                        System.out.print(String.format("[%d x ",tmpDimList.get(j+tmpDimList.size()-braceCount)));
+                    }
+                    System.out.print("i32");
+                    for(j=0;j<braceCount;j++){
+                        System.out.print("]");
+                    }
+                    System.out.print(" [");
+                    visit(ctx.initval(k));
+                    System.out.print("]");
+                    if(k!=thisDim-1){
+                        System.out.print(", ");
+                    }
+                }
+                if(ctx.initval().size()<thisDim){
+                    //补0，用zeroinitializer
+                    for(k=ctx.initval().size();k<thisDim;k++){
+                        for(j=0;j<braceCount;j++){
+                            System.out.print(String.format("[%d x ",tmpDimList.get(j+tmpDimList.size()-braceCount)));
+                        }
+                        System.out.print("i32");
+                        for(j=0;j<braceCount;j++){
+                            System.out.print("]");
+                        }
+                        System.out.print(" zeroinitializer");
+                        if(k!=thisDim-1){
+                            System.out.print(", ");
+                        }
+                    }
+                }
+
+            }
+            else {
+                //最内层了,直接打印
+                int thisDim=tmpDimList.get(tmpDimList.size()-1);
+                for(j=0;j<ctx.initval().size();j++){
+                    visit(ctx.initval(j));
+                    int value=nodeValue;
+                    System.out.print(String.format("i32 %d",value));
+                    if(j!=thisDim-1){
+                        System.out.print(",");
+                    }
+                }
+
+                //补0
+                for(j=ctx.initval().size();j<thisDim;j++){
+                    System.out.print("i32 0");
+                    if(j!=thisDim-1){
+                        System.out.print(",");
+                    }
+                }
+            }
+            if(ctx.RBRACE()!=null){
+                braceCount+=1;
+            }
+        }
+        else {
+            //局部变量数组初始化
+            int i,j;
+            if(ctx.LBRACE()!=null){
+                braceCount-=1;
+            }
+            if(ctx.initval(0)!=null&&ctx.initval(0).exp()==null){
+                //外层
+                for(i=0;i<ctx.initval().size();i++){
+                    visit(ctx.initval(i));
+                    int index=cntList.size()-braceCount-1;
+                    int thisDim=cntList.get(index)+1;
+                    //此维+1
+                    cntList.set(index, thisDim);
+                }
+                //归零，比如[0][6]变成[1][0]
+                int index=cntList.size()-braceCount-1;
+                cntList.set(index, 0);
+            }
+            else {
+                int elements=0,dimAll=1;
+                for(i=0;i<tmpDimList.size();i++){
+                    dimAll*=tmpDimList.get(i);
+                }
+                //计算完之前的偏移量
+                for(i=0;i<cntList.size()-1;i++){
+                    //该层的长度乘该层的实际偏移
+                    dimAll/=tmpDimList.get(i);
+                    elements+=cntList.get(i)*dimAll;
+                }
+                for(i=0;i<ctx.initval().size();i++){
+                    //定位到元素
+                    int elemReg=regNumList.get(regNumList.size()-1);
+                    System.out.println(String.format("%%t%d = getelementptr i32, i32* %%t%d, i32 %d", elemReg,basePointer,elements+i));
+                    regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                    //赋值
+                    visit(ctx.initval(i));
+                    int value=nodeValue;
+                    if(useReg){
+                        int valueReg=regNumList.get(regNumList.size()-1)-1;
+                        System.out.println(String.format("store i32 %%t%d, i32* %%t%d", valueReg,elemReg));
+                    }
+                    else {
+                        System.out.println(String.format("store i32 %d, i32* %%t%d", value,elemReg));
+                    }
+                }
+            }
+            if(ctx.RBRACE()!=null){
+                braceCount+=1;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -202,6 +667,9 @@ public class Visitor extends sysyBaseVisitor<Void>{
             String curName=name;
             register_num = getReg(curName);
             int varReg=register_num;
+            if(ctx.lval().LBRACKET(0)!=null){
+                varReg=regNumList.get(regNumList.size()-1)-1;
+            }
             String leftGlobal="";
             if(varReg==-1){
                 leftGlobal=getGlobalReg(curName);
@@ -307,7 +775,98 @@ public class Visitor extends sysyBaseVisitor<Void>{
     @Override
     public Void visitLval(sysyParser.LvalContext ctx) {
         this.name="";
-        return super.visitLval(ctx);
+        if(ctx.LBRACKET(0)!=null){
+            //数组特判
+            int i,j,base;
+            String identName=ctx.ident().IDENT().getText();
+            int varReg=getReg(identName);
+            Symbol thisSymbol;
+            //load数组
+            if(varReg==-1){
+                //全局
+                Symbol arraySymbol=getGlobalArray(identName);
+                thisSymbol=arraySymbol;
+                if(arraySymbol.getBasePointer()==-1){
+                    //还没有basePointer
+                    int setReg = regNumList.get(regNumList.size()-1);
+                    ArrayList<Integer> dimList=arraySymbol.getDimList();
+                    System.out.print(String.format("%%t%d = getelementptr ",setReg));
+                    //两个<ty>
+                    for(i=0;i<dimList.size();i++){
+                        System.out.print(String.format("[%d x ",dimList.get(i)));
+                    }
+                    System.out.print("i32");
+                    for(i=0;i<dimList.size();i++){
+                        System.out.print("]");
+                    }
+                    System.out.print(",");
+                    for(i=0;i<dimList.size();i++){
+                        System.out.print(String.format("[%d x ",dimList.get(i)));
+                    }
+                    System.out.print("i32");
+                    for(i=0;i<dimList.size();i++){
+                        System.out.print("]");
+                    }
+                    System.out.print(String.format("* @%s",arraySymbol.getSymName()));
+                    for(i=0;i<arraySymbol.getDimension()+1;i++){
+                        System.out.print(", i32 0");
+                    }
+                    System.out.println();
+                    arraySymbol.setBasePointer(setReg);
+                    regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                }
+                //获取basePointer
+                base=arraySymbol.getBasePointer();
+            }
+            else {
+                //局部
+                Symbol arraySymbol=getArray(identName);
+                thisSymbol=arraySymbol;
+                base=arraySymbol.getBasePointer();
+            }
+            //获取基地址后，计算偏移量
+            int dimAll=1;
+            ArrayList<Integer> dimList=thisSymbol.getDimList();
+            for(i=0;i<thisSymbol.getDimension();i++){
+                dimAll*=dimList.get(i);
+            }
+            if(ctx.LBRACKET().size()!=thisSymbol.getDimension()){
+                //必须是元素
+                System.exit(-1);
+            }
+            //计数基准寄存器，值为0
+            int cntBase=regNumList.get(regNumList.size()-1);
+            System.out.println(String.format("%%t%d = add i32 0, 0",cntBase));
+            regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+            for(i=0;i<ctx.exp().size();i++){
+                dimAll/=dimList.get(i);
+                visit(ctx.exp(i));
+                if(useReg){
+                    int tmpReg=regNumList.get(regNumList.size()-1);
+                    System.out.println(String.format("%%t%d = mul i32 %%t%d, %d",tmpReg,tmpReg-1,dimAll));
+                    regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                    tmpReg=regNumList.get(regNumList.size()-1);
+                    System.out.println(String.format("%%t%d = add i32 %%t%d, %%t%d",tmpReg,cntBase,tmpReg-1));
+                    cntBase=tmpReg;
+                    regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                }
+                else {
+                    int value=nodeValue*dimAll;
+                    int tmpReg=regNumList.get(regNumList.size()-1);
+                    System.out.println(String.format("%%t%d = add i32 %%t%d, %d",tmpReg,cntBase,value));
+                    cntBase=tmpReg;
+                    regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                }
+            }
+            //bias
+            int biasReg=regNumList.get(regNumList.size()-1);
+            System.out.println(String.format("%%t%d = getelementptr i32, i32* %%t%d, i32 %%t%d",biasReg,base,cntBase));
+            regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+        }
+        else {
+            visit(ctx.ident());
+        }
+        return null;
     }
 
     @Override
@@ -515,7 +1074,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                     System.exit(-1);
                 }
                 isReg=false;
-                useReg=false;
+//                useReg=false;
                 visit(ctx.funcrparams());
                 if(useReg){
                     register_num=regNumList.get(regNumList.size()-1)-1;
@@ -590,10 +1149,18 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 //是变量，要load
                 isReg=true;
                 useReg=true;
-                register_num = regNumList.get(regNumList.size()-1);
+
                 String identName=ctx.lval().ident().IDENT().getText();
                 int varReg=getReg(identName);
-                if(varReg==-1){
+                register_num = regNumList.get(regNumList.size()-1);
+                if(ctx.lval().LBRACKET(0)!=null){
+                    visit(ctx.lval());
+                    isReg=true;
+                    useReg=true;
+                    register_num = regNumList.get(regNumList.size()-1);
+                    System.out.println(String.format("%%t%d = load i32, i32* %%t%d", register_num, register_num-1));
+                }
+                else if(varReg==-1){
                     String gloReg=getGlobalReg(identName);
                     System.out.println(String.format("%%t%d = load i32, i32* @%s", register_num, gloReg));
                 }
@@ -932,6 +1499,29 @@ public class Visitor extends sysyBaseVisitor<Void>{
         for(i=globalSym.size()-1;i>=0;i--){
             if(str.equals(globalSym.get(i).getSymName())&&globalSym.get(i).getType().equals("var")){
                 return globalSym.get(i).getSymName();
+            }
+        }
+        return null;
+    }
+
+    public Symbol getArray(String str){
+        int i,j;
+        for (i=symStack.size()-1;i>=0;i--){
+            ArrayList<Symbol> tmp=symStack.get(i);
+            for(j=tmp.size()-1;j>=0;j--){
+                if(str.equals(tmp.get(j).getSymName())){
+                    return tmp.get(j);
+                }
+            }
+        }
+        return null;
+    }
+
+    public Symbol getGlobalArray(String str){
+        int i;
+        for(i=globalSym.size()-1;i>=0;i--){
+            if(str.equals(globalSym.get(i).getSymName())){
+                return globalSym.get(i);
             }
         }
         return null;

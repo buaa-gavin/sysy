@@ -4,7 +4,25 @@ import java.util.Stack;
 
 public class PreVisit extends sysyBaseVisitor<Void>{
     private String name;
-    boolean flag1=false,flag2=false,flag3=false,flag4=false,flag5=false,flag6=false;
+    boolean flag1=false,flag2=false,flag3=false,flag4=false,flag5=false,flag6=false,flagArray=false;
+
+    @Override
+    public Void visitConstdef(sysyParser.ConstdefContext ctx){
+        if(ctx.LBRACKET()!=null && !flagArray){
+            System.out.println("declare void @memset(i32*, i32, i32)");
+            flagArray=true;
+        }
+        return null;
+    }
+
+    @Override
+    public Void visitVardef(sysyParser.VardefContext ctx){
+        if(ctx.LBRACKET()!=null && !flagArray){
+            System.out.println("declare void @memset(i32*, i32, i32)");
+            flagArray=true;
+        }
+        return null;
+    }
 
     @Override
     public Void visitUnaryexp(sysyParser.UnaryexpContext ctx){
