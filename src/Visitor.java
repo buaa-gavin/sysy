@@ -654,8 +654,9 @@ public class Visitor extends sysyBaseVisitor<Void>{
         System.out.println("{");
         visit(ctx.block());
         //占位
-        int posReg=regNumList.get(regNumList.size()-1);
-        System.out.println(String.format("%%t%d = add i32 0,0",posReg));
+        if(!isVoid){
+            System.out.println("ret i32 0");
+        }
         System.out.println("}");
         defGlobal=true;
         return null;
@@ -1117,9 +1118,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                     System.out.print("]");
                 }
                 System.out.print(String.format("* %%t%d",base));
-                for(i=ctx.LBRACKET().size();i<dimList.size();i++){
-                    System.out.print(",i32 0");
-                }
+                System.out.print(",i32 0");
                 System.out.println(String.format(",i32 %%t%d",cntBase));
             }
             regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);

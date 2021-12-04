@@ -46,7 +46,7 @@ br label %t8
 t12:
 %t35 = load i32, i32* %t5
 ret i32 %t35
-ret void
+%t36 = add i32 0,0
 }
 define i32 @main(){
 %t1 = alloca [3 x i32]
@@ -54,17 +54,17 @@ define i32 @main(){
 %t3 = getelementptr [3 x i32],[3 x i32]* %t1, i32 0, i32 0
 %t4 = add i32 0, 0
 %t5 = add i32 %t4, 0
-%t6 = getelementptr i32,i32* %t3,i32 %t5
+%t6 = getelementptr i32,i32* %t3,i32 0,i32 %t5
 store i32 -2, i32* %t6
 %t7 = getelementptr [3 x i32],[3 x i32]* %t1, i32 0, i32 0
 %t8 = add i32 0, 0
 %t9 = add i32 %t8, 1
-%t10 = getelementptr i32,i32* %t7,i32 %t9
+%t10 = getelementptr i32,i32* %t7,i32 0,i32 %t9
 store i32 2, i32* %t10
 %t11 = getelementptr [3 x i32],[3 x i32]* %t1, i32 0, i32 0
 %t12 = add i32 0, 0
 %t13 = add i32 %t12, 2
-%t14 = getelementptr i32,i32* %t11,i32 %t13
+%t14 = getelementptr i32,i32* %t11,i32 0,i32 %t13
 store i32 -7, i32* %t14
 %t15 = alloca i32
 %t16 = getelementptr [3 x i32],[3 x i32]* %t1, i32 0, i32 0
@@ -75,11 +75,11 @@ store i32 -7, i32* %t14
 %t21 = call i32 @_getMaxOfAll(i32* %t20,i32 3)
 %t22 = mul i32 %t21, 1
 %t23 = add i32 %t17, %t22
-%t24 = getelementptr i32,i32* %t16,i32 %t23
+%t24 = getelementptr i32,i32* %t16,i32 0,i32 %t23
 %t25 = load i32, i32* %t24
 store i32 %t25, i32* %t15
 %t26 = load i32, i32* %t15
 call void @putint(i32 %t26)
 ret i32 0
-ret void
+%t27 = add i32 0,0
 }
