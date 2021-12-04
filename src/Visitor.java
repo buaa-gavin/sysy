@@ -1118,7 +1118,9 @@ public class Visitor extends sysyBaseVisitor<Void>{
                     System.out.print("]");
                 }
                 System.out.print(String.format("* %%t%d",base));
-                System.out.print(",i32 0");
+                for(i=ctx.LBRACKET().size();i<dimList.size();i++){
+                    System.out.print(",i32 0");
+                }
                 System.out.println(String.format(",i32 %%t%d",cntBase));
             }
             regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
