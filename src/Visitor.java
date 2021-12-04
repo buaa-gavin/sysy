@@ -1415,7 +1415,6 @@ public class Visitor extends sysyBaseVisitor<Void>{
                         visit(ctx.funcrparams().exp(i));
                         if(paramList.get(i).getDimension()>0){
                             String arrayName=ctx.funcrparams().exp(i).addexp().mulexp().unaryexp().primaryexp().lval().ident().getText();
-                            System.out.println(arrayName);
                             Symbol testArray=getArray(arrayName);
                             if(testArray==null){
                                 testArray=getGlobalArray(arrayName);
