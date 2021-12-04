@@ -653,7 +653,9 @@ public class Visitor extends sysyBaseVisitor<Void>{
         System.out.print(")");
         System.out.println("{");
         visit(ctx.block());
-        System.out.println("ret void");
+        //占位
+        int posReg=regNumList.get(regNumList.size()-1);
+        System.out.println(String.format("%%t%d = add i32 0,0",posReg));
         System.out.println("}");
         defGlobal=true;
         return null;
