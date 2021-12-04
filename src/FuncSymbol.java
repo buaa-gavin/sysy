@@ -5,12 +5,9 @@ public class FuncSymbol {
     private int paramNum;
     private ArrayList<Symbol> paramList;
 
-    public void setParamList(ArrayList<Symbol> paramList) {
-        this.paramList = paramList;
-    }
-
     public FuncSymbol(String funcName){
         this.funcName=funcName;
+        this.paramList=new ArrayList<>();
     }
 
     public void setParamNum(int paramNum) {

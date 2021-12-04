@@ -736,7 +736,10 @@ public class Visitor extends sysyBaseVisitor<Void>{
 //        this.regNumList.add(1);
         int i=0;
         if(haveParam){
-            curFunc.setParamList(paramSymList);
+            ArrayList<Symbol> params=curFunc.getParamList();
+            for(i=0;i<paramSymList.size();i++){
+                params.add(paramSymList.get(i));
+            }
             for(i=0;i<paramSymList.size();i++){
                 Symbol paramSym=paramSymList.get(i);
                 blockSym.add(paramSym);
@@ -1415,6 +1418,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                     regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
                 }
                 ArrayList<Symbol> paramList=thisFunc.getParamList();
+                System.out.println(thisFunc.getFuncName());
                 for(i=0;i<regList.size();i++){
                     Symbol paramSymbol=paramList.get(i);
                     if(paramSymbol.getType().equals("var")){
