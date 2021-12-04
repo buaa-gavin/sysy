@@ -653,6 +653,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
         System.out.print(")");
         System.out.println("{");
         visit(ctx.block());
+        System.out.println("ret void");
         System.out.println("}");
         defGlobal=true;
         return null;
