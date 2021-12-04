@@ -7,6 +7,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
     private int nodeValue;
     private int braceCount;
     private int basePointer;//数组[0]的基地址，后面按照一维数组模拟加上去
+    private int condReg;
     private boolean isReg;
     private boolean useReg;//整个表达式有没有用到register
     private boolean singleBool;//是否是单个表达式
@@ -1729,6 +1730,15 @@ public class Visitor extends sysyBaseVisitor<Void>{
             visit(ctx.landexp());
             //这里不用在判断单符合，因为landexp时已经在上面会判断的
             leftReg=regNumList.get(regNumList.size()-1)-1;
+            int shortReg=regNumList.get(regNumList.size()-1);
+            System.out.println(String.format("%%t%d = icmp ne i1 %%t%d, 0",shortReg,leftReg));
+            int ifReg=shortReg+1,retReg=shortReg+2;
+            System.out.println(String.format("br i1 %%t%d,label %%t%d,label %%t%d",shortReg,ifReg,retReg));
+            regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+3);
+            condReg=regNumList.get(regNumList.size()-1);
+            System.out.println(String.format("%%t%d = alloca i1",condReg));
+            System.out.println(String.format("store i1 %%t%d, i1* %%t%d",shortReg,condReg));
+            System.out.println(String.format("t%d:",ifReg));
             singleBool=true;
             visit(ctx.eqexp());
             if(singleBool){
@@ -1744,7 +1754,13 @@ public class Visitor extends sysyBaseVisitor<Void>{
             }
             rightReg=regNumList.get(regNumList.size()-1)-1;
             register_num=regNumList.get(regNumList.size()-1);
-            System.out.println(String.format("%%t%d = and i1 %%t%d,%%t%d",register_num,leftReg,rightReg));
+            System.out.println(String.format("%%t%d = icmp ne i1 %%t%d, 0",register_num,rightReg));
+            System.out.println(String.format("store i1 %%t%d, i1* %%t%d",register_num,condReg));
+            System.out.println(String.format("br label %%t%d",retReg));
+            regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+            System.out.println(String.format("t%d:",retReg));
+            register_num=regNumList.get(regNumList.size()-1);
+            System.out.println(String.format("%%t%d = load i1, i1* %%t%d", register_num, condReg));
             regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
         }
         return null;
@@ -1759,10 +1775,25 @@ public class Visitor extends sysyBaseVisitor<Void>{
             int leftReg,rightReg;
             visit(ctx.lorexp());
             leftReg=regNumList.get(regNumList.size()-1)-1;
+            int shortReg=regNumList.get(regNumList.size()-1);
+            System.out.println(String.format("%%t%d = icmp ne i1 %%t%d, 0",shortReg,leftReg));
+            int ifReg=shortReg+1,retReg=shortReg+2;
+            System.out.println(String.format("br i1 %%t%d,label %%t%d,label %%t%d",shortReg,ifReg,retReg));
+            regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+3);
+            condReg=regNumList.get(regNumList.size()-1);
+            System.out.println(String.format("%%t%d = alloca i1",condReg));
+            System.out.println(String.format("store i1 %%t%d, i1* %%t%d",shortReg,condReg));
+            System.out.println(String.format("t%d:",retReg));
             visit(ctx.landexp());
             rightReg=regNumList.get(regNumList.size()-1)-1;
             register_num=regNumList.get(regNumList.size()-1);
-            System.out.println(String.format("%%t%d = or i1 %%t%d,%%t%d",register_num,leftReg,rightReg));
+            System.out.println(String.format("%%t%d = icmp ne i1 %%t%d, 0",register_num,rightReg));
+            System.out.println(String.format("store i1 %%t%d, i1* %%t%d",register_num,condReg));
+            System.out.println(String.format("br label %%t%d",ifReg));
+            regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+            System.out.println(String.format("t%d:",ifReg));
+            register_num=regNumList.get(regNumList.size()-1);
+            System.out.println(String.format("%%t%d = load i1, i1* %%t%d", register_num, condReg));
             regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
         }
         return null;
