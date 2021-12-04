@@ -864,9 +864,9 @@ public class Visitor extends sysyBaseVisitor<Void>{
         }
         else if(ctx.RETURN()!=null){
 //            useReg=false;
-            visit(ctx.exp());
             System.out.print("ret ");
             if(ctx.exp()!=null){
+                visit(ctx.exp());
                 System.out.print("i32 ");
                 if(isVoid){
                     System.exit(-1);
@@ -1707,17 +1707,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
             singleBool=true;
             int leftReg,rightReg;
             visit(ctx.landexp());
-            if(singleBool){
-                register_num=regNumList.get(regNumList.size()-1);
-                if(useReg){
-                    System.out.println(String.format("%%t%d = icmp ne i32 %%t%d, 0",register_num,register_num-1));
-                }
-                else {
-                    int value=nodeValue;
-                    System.out.println(String.format("%%t%d = icmp ne i32 %d, 0",register_num,value));
-                }
-                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
-            }
+            //这里不用在判断单符合，因为landexp时已经在上面会判断的
             leftReg=regNumList.get(regNumList.size()-1)-1;
             singleBool=true;
             visit(ctx.eqexp());
