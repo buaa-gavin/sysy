@@ -1222,13 +1222,13 @@ public class Visitor extends sysyBaseVisitor<Void>{
             boolean leftReg,rightReg;
             visit(ctx.mulexp());
             left=nodeValue;
-            leftReg=isReg;
+            leftReg=useReg;
             if(regNumList.size()>0){
                 leftNum=regNumList.get(regNumList.size()-1)-1;
             }
             visit(ctx.unaryexp());
             right=nodeValue;
-            rightReg=isReg;
+            rightReg=useReg;
             if(regNumList.size()>0){
                 rightNum=regNumList.get(regNumList.size()-1)-1;
             }
@@ -1468,8 +1468,6 @@ public class Visitor extends sysyBaseVisitor<Void>{
                         System.out.print(",");
                     }
                 }
-                System.out.println(funcName);
-                System.out.println(useReg);
                 System.out.println(")");
             }
         }
