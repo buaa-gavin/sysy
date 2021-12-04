@@ -14,6 +14,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
     private boolean haveParam;//有需要分配空间的
     private boolean isVoid;//函数类型
     private boolean shouldLoad;//维数不同不用load
+    private boolean notValue;//没用寄存器但也不是值
     private String sign;
     private String type = "";
     private String name = "";
@@ -490,6 +491,9 @@ public class Visitor extends sysyBaseVisitor<Void>{
                     if(useReg){
                         int valueReg=regNumList.get(regNumList.size()-1)-1;
                         System.out.println(String.format("store i32 %%t%d, i32* %%t%d",valueReg,varReg));
+                    }
+                    else if(notValue){
+                        System.exit(-1);
                     }
                     else {
                         System.out.println(String.format("store i32 %d, i32* %%t%d",value,varReg));
@@ -1144,6 +1148,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
     @Override
     public Void visitAddexp(sysyParser.AddexpContext ctx) {
         useReg=false;
+        notValue=false;
         if(ctx.children.size()==1){
             visit(ctx.mulexp());
         }
@@ -1399,6 +1404,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
             else {
                 int i,j;
                 FuncSymbol thisFunc=searchFunc(funcName);
+                ArrayList<Symbol> paramList=thisFunc.getParamList();
                 if(thisFunc==null){
                     System.exit(-1);
                 }
@@ -1407,6 +1413,15 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 if(ctx.funcrparams()!=null){
                     for(i=0;i<ctx.funcrparams().exp().size();i++){
                         visit(ctx.funcrparams().exp(i));
+                        if(paramList.get(i).getDimension()>0){
+                            Symbol testArray=getArray(name);
+                            if(testArray==null){
+                                testArray=getGlobalArray(name);
+                            }
+                            if(testArray==null||testArray.getDimension()!=paramList.get(i).getDimension()){
+                                System.exit(-1);
+                            }
+                        }
                         if(useReg){
                             regList.add(regNumList.get(regNumList.size()-1)-1);
                             valueList.add(0);
@@ -1418,6 +1433,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                     }
                 }
                 if(thisFunc.getFuncType().equals("void")){
+                    notValue=true;
                     System.out.print(String.format("call void @%s(",funcName));
                 }
                 else {
@@ -1426,7 +1442,6 @@ public class Visitor extends sysyBaseVisitor<Void>{
                     System.out.print(String.format("%%t%d = call i32 @%s(",retReg,funcName));
                     regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
                 }
-                ArrayList<Symbol> paramList=thisFunc.getParamList();
                 for(i=0;i<regList.size();i++){
                     Symbol paramSymbol=paramList.get(i);
                     if(paramSymbol.getType().equals("var")){
