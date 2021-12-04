@@ -1155,14 +1155,14 @@ public class Visitor extends sysyBaseVisitor<Void>{
             boolean leftReg,rightReg;
             visit(ctx.addexp());
             left=nodeValue;
-            leftReg=isReg;
+            leftReg=useReg;
             //取最近的寄存器值
             if(regNumList.size()>0){
                 leftNum=regNumList.get(regNumList.size()-1)-1;
             }
             visit(ctx.mulexp());
             right=nodeValue;
-            rightReg=isReg;
+            rightReg=useReg;
             if(regNumList.size()>0){
                 rightNum=regNumList.get(regNumList.size()-1)-1;
             }
@@ -1468,6 +1468,8 @@ public class Visitor extends sysyBaseVisitor<Void>{
                         System.out.print(",");
                     }
                 }
+                System.out.println(funcName);
+                System.out.println(useReg);
                 System.out.println(")");
             }
         }
