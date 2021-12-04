@@ -485,7 +485,6 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
                 //有初始值
                 if(ctx.children.size() != 1){
-//            useReg=false;
                     visit(ctx.initval());
                     int value = nodeValue;
                     if(useReg){
@@ -845,7 +844,6 @@ public class Visitor extends sysyBaseVisitor<Void>{
                     System.exit(-1);
                 }
             }
-//            useReg=false;
             visit(ctx.exp());
             int value = nodeValue;
             if(useReg){
@@ -867,7 +865,6 @@ public class Visitor extends sysyBaseVisitor<Void>{
             }
         }
         else if(ctx.RETURN()!=null){
-//            useReg=false;
             if(ctx.exp()!=null){
                 visit(ctx.exp());
                 System.out.print("ret ");
@@ -956,6 +953,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
         if(ctx.LBRACKET(0)!=null||getArray(ctx.ident().IDENT().getText())!=null
         ||getGlobalArray(ctx.ident().IDENT().getText())!=null){
             //数组特判
+//            useReg=true;
             int i,j,base;
             String identName=ctx.ident().IDENT().getText();
             int varReg=getReg(identName);
@@ -1127,7 +1125,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                     System.out.print("]");
                 }
                 System.out.print(String.format("* %%t%d",base));
-                for(i=ctx.LBRACKET().size();i<dimList.size();i++){
+                if(ctx.LBRACKET().size()!=dimList.size()){
                     System.out.print(",i32 0");
                 }
                 System.out.println(String.format(",i32 %%t%d",cntBase));
@@ -1354,7 +1352,6 @@ public class Visitor extends sysyBaseVisitor<Void>{
                     System.exit(-1);
                 }
                 isReg=false;
-//                useReg=false;
                 visit(ctx.funcrparams());
                 if(useReg){
                     register_num=regNumList.get(regNumList.size()-1)-1;
@@ -1404,10 +1401,10 @@ public class Visitor extends sysyBaseVisitor<Void>{
             else {
                 int i,j;
                 FuncSymbol thisFunc=searchFunc(funcName);
-                ArrayList<Symbol> paramList=thisFunc.getParamList();
                 if(thisFunc==null){
                     System.exit(-1);
                 }
+                ArrayList<Symbol> paramList=thisFunc.getParamList();
                 ArrayList<Integer> regList=new ArrayList<>();
                 ArrayList<Integer> valueList=new ArrayList<>();
                 if(ctx.funcrparams()!=null){
@@ -1415,11 +1412,12 @@ public class Visitor extends sysyBaseVisitor<Void>{
                         visit(ctx.funcrparams().exp(i));
                         if(paramList.get(i).getDimension()>0){
                             String arrayName=ctx.funcrparams().exp(i).addexp().mulexp().unaryexp().primaryexp().lval().ident().getText();
+                            int brackets=ctx.funcrparams().exp(i).addexp().mulexp().unaryexp().primaryexp().lval().LBRACKET().size();
                             Symbol testArray=getArray(arrayName);
                             if(testArray==null){
                                 testArray=getGlobalArray(arrayName);
                             }
-                            if(testArray==null||testArray.getDimension()!=paramList.get(i).getDimension()){
+                            if(testArray==null||testArray.getDimension()-brackets!=paramList.get(i).getDimension()){
                                 System.exit(-1);
                             }
                         }
@@ -1528,9 +1526,9 @@ public class Visitor extends sysyBaseVisitor<Void>{
                     //数组
                     shouldLoad=true;
                     visit(ctx.lval());
+                    isReg=true;
+                    useReg=true;
                     if(shouldLoad){
-                        isReg=true;
-                        useReg=true;
                         register_num = regNumList.get(regNumList.size()-1);
                         System.out.println(String.format("%%t%d = load i32, i32* %%t%d", register_num, register_num-1));
                     }
