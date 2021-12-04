@@ -1418,7 +1418,6 @@ public class Visitor extends sysyBaseVisitor<Void>{
                     regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
                 }
                 ArrayList<Symbol> paramList=thisFunc.getParamList();
-                System.out.println(thisFunc.getFuncName());
                 for(i=0;i<regList.size();i++){
                     Symbol paramSymbol=paramList.get(i);
                     if(paramSymbol.getType().equals("var")){
@@ -1864,7 +1863,8 @@ public class Visitor extends sysyBaseVisitor<Void>{
         for (i=symStack.size()-1;i>=0;i--){
             ArrayList<Symbol> tmp=symStack.get(i);
             for(j=tmp.size()-1;j>=0;j--){
-                if(str.equals(tmp.get(j).getSymName())&&(tmp.get(j).getType().equals("var array")||tmp.get(j).getType().equals("const array"))){
+                if(str.equals(tmp.get(j).getSymName())&&(tmp.get(j).getType().equals("var array")||
+                tmp.get(j).getType().equals("const array")||tmp.get(j).getType().equals("var param array"))){
                     return tmp.get(j);
                 }
             }
