@@ -1166,7 +1166,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
             if(regNumList.size()>0){
                 rightNum=regNumList.get(regNumList.size()-1)-1;
             }
-            isReg=true;
+            useReg=true;
             if(ctx.ADD()!=null){
                 if(leftReg&&rightReg){
                     register_num=regNumList.get(regNumList.size()-1);
@@ -1186,7 +1186,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 else {
                     ans=left+right;
                     nodeValue=ans;
-                    isReg=false;
+                    useReg=false;
                 }
             }
             else {
@@ -1205,7 +1205,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 } else {
                     ans = left - right;
                     nodeValue = ans;
-                    isReg=false;
+                    useReg=false;
                 }
             }
         }
@@ -1232,7 +1232,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
             if(regNumList.size()>0){
                 rightNum=regNumList.get(regNumList.size()-1)-1;
             }
-            isReg=true;
+            useReg=true;
             if(ctx.MUL()!=null){
                 if(leftReg&&rightReg){
                     register_num=regNumList.get(regNumList.size()-1);
@@ -1252,7 +1252,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 else {
                     ans=left*right;
                     nodeValue=ans;
-                    isReg=false;
+                    useReg=false;
                 }
             }
             else if(ctx.DIV()!=null){
@@ -1274,7 +1274,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 else {
                     ans=left/right;
                     nodeValue=ans;
-                    isReg=false;
+                    useReg=false;
                 }
             }
             else {
@@ -1296,7 +1296,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 else {
                     ans=left%right;
                     nodeValue=ans;
-                    isReg=false;
+                    useReg=false;
                 }
             }
         }
@@ -1475,7 +1475,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
             visit(ctx.unaryop());
             String sig = sign;
             visit(ctx.unaryexp());
-            boolean nodeBool=isReg;
+            boolean nodeBool=useReg;
             if(sig.equals("-")){
                 if(nodeBool){
                     register_num=regNumList.get(regNumList.size()-1);
