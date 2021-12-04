@@ -1509,6 +1509,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                         //不load，就不用寄存器+1
                         regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)-1);
                     }
+                    shouldLoad=true;
                 }
                 else if(varReg==-1){
                     String gloReg=getGlobalReg(identName);
