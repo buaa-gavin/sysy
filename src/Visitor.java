@@ -1160,6 +1160,8 @@ public class Visitor extends sysyBaseVisitor<Void>{
             if(regNumList.size()>0){
                 leftNum=regNumList.get(regNumList.size()-1)-1;
             }
+            //要进mul了
+            useReg=false;
             visit(ctx.mulexp());
             right=nodeValue;
             rightReg=useReg;
@@ -1226,6 +1228,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
             if(regNumList.size()>0){
                 leftNum=regNumList.get(regNumList.size()-1)-1;
             }
+            useReg=false;
             visit(ctx.unaryexp());
             right=nodeValue;
             rightReg=useReg;
