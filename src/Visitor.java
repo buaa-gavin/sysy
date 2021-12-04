@@ -642,7 +642,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
         }
         visit(ctx.ident());
         String funcName=name;
-        FuncSymbol func=new FuncSymbol(funcName);
+        FuncSymbol func=new FuncSymbol(funcName,funcType);
         funcList.add(func);
         curFunc=func;
         System.out.print(String.format("define %s @%s(",funcType,funcName));
@@ -1417,7 +1417,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                         }
                     }
                 }
-                if(isVoid){
+                if(thisFunc.getFuncType().equals("void")){
                     System.out.print(String.format("call void @%s(",funcName));
                 }
                 else {

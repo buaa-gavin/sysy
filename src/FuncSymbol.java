@@ -2,11 +2,17 @@ import java.util.ArrayList;
 
 public class FuncSymbol {
     private String funcName;
+    private String funcType;
     private int paramNum;
     private ArrayList<Symbol> paramList;
 
-    public FuncSymbol(String funcName){
+    public String getFuncType() {
+        return funcType;
+    }
+
+    public FuncSymbol(String funcName, String funcType){
         this.funcName=funcName;
+        this.funcType=funcType;
         this.paramList=new ArrayList<>();
     }
 
