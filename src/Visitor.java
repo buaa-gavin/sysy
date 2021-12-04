@@ -657,6 +657,9 @@ public class Visitor extends sysyBaseVisitor<Void>{
         if(!isVoid){
             System.out.println("ret i32 0");
         }
+        else {
+            System.out.println("ret void");
+        }
         System.out.println("}");
         defGlobal=true;
         return null;
