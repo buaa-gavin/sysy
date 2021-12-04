@@ -11,9 +11,13 @@ public class Visitor extends sysyBaseVisitor<Void>{
     private boolean useReg;//整个表达式有没有用到register
     private boolean singleBool;//是否是单个表达式
     private boolean defGlobal;//是否正在定义全局变量
+    private boolean haveParam;//有需要分配空间的
+    private boolean isVoid;//函数类型
+    private boolean shouldLoad;//维数不同不用load
     private String sign;
     private String type = "";
     private String name = "";
+    private FuncSymbol curFunc;//当前函数
     private Stack<ArrayList<Symbol>> symStack = new Stack<>(); //符号栈，arraylist存Symbol类的符号
     private Stack<String> typeStack = new Stack<>();
     private Stack<Integer> beginStack=new Stack<>();
@@ -22,16 +26,22 @@ public class Visitor extends sysyBaseVisitor<Void>{
     private ArrayList<Symbol> globalSym=new ArrayList<>();//全局符号存储
     private ArrayList<Integer> tmpDimList=new ArrayList<>();
     private ArrayList<Integer> cntList=new ArrayList<>();//用于在局部数组初始化时计算各维的值
+    private ArrayList<Symbol> paramSymList=new ArrayList<>();
+    private ArrayList<FuncSymbol> funcList=new ArrayList<>();
 
     @Override
     public Void visitCompunit(sysyParser.CompunitContext ctx) {
         // 调用默认的 visit 方法即可
         defGlobal=true;
-        for(int i=0;i<ctx.decl().size();i++){
-            visit(ctx.decl(i));
+        if(ctx.compunit()!=null){
+            visit(ctx.compunit());
         }
-        defGlobal=false;
-        visit(ctx.funcdef());
+        if(ctx.decl()!=null){
+            visit(ctx.decl());
+        }
+        else {
+            visit(ctx.funcdef());
+        }
         return null;
     }
 
@@ -486,7 +496,6 @@ public class Visitor extends sysyBaseVisitor<Void>{
                     }
                 }
             }
-
         }
 
         return null;
@@ -620,12 +629,32 @@ public class Visitor extends sysyBaseVisitor<Void>{
     @Override
     public Void visitFuncdef(sysyParser.FuncdefContext ctx) {
         this.name="";
+        defGlobal=false;
         regNumList.add(1);
+        String funcType="";
+        if(ctx.functype().INT()!=null){
+            isVoid=false;
+            funcType="i32";
+        }
+        else {
+            isVoid=true;
+            funcType="void";
+        }
         visit(ctx.ident());
-        System.out.print("define dso_local i32 @main()");
+        String funcName=name;
+        FuncSymbol func=new FuncSymbol(funcName);
+        funcList.add(func);
+        curFunc=func;
+        System.out.print(String.format("define %s @%s(",funcType,funcName));
+        if(ctx.funcfparams()!=null){
+            haveParam=true;
+            visit(ctx.funcfparams());
+        }
+        System.out.print(")");
         System.out.println("{");
         visit(ctx.block());
         System.out.println("}");
+        defGlobal=true;
         return null;
     }
 
@@ -636,11 +665,136 @@ public class Visitor extends sysyBaseVisitor<Void>{
     }
 
     @Override
+    public Void visitFuncfparams(sysyParser.FuncfparamsContext ctx) {
+        paramSymList.removeAll(paramSymList);
+        curFunc.setParamNum(ctx.funcfparam().size());
+        for(int i=0;i<ctx.funcfparam().size();i++){
+            visit(ctx.funcfparam(i));
+            if(i!=ctx.funcfparam().size()-1){
+                System.out.print(",");
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public Void visitFuncfparam(sysyParser.FuncfparamContext ctx) {
+        if(ctx.LBRACKET(0)!=null){
+            //数组形参
+            if(ctx.LBRACKET().size()==1){
+                //一维
+                visit(ctx.ident());
+                String funcParamName=name;
+                int paramReg=regNumList.get(regNumList.size()-1);
+                System.out.print(String.format("i32* %%t%d",paramReg));
+                Symbol arraySymbol=new Symbol(funcParamName,"var param array",paramReg);
+                arraySymbol.setDimension(1);
+                ArrayList<Integer> dimList=arraySymbol.getDimList();
+                dimList.add(1);
+                paramSymList.add(arraySymbol);
+                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+            }
+            else {
+                int i;
+                visit(ctx.ident());
+                String funcParamName=name;
+                int paramReg=regNumList.get(regNumList.size()-1);
+                Symbol arraySymbol=new Symbol(funcParamName,"var param array",paramReg);
+                arraySymbol.setDimension(ctx.LBRACKET().size());
+                ArrayList<Integer> dimList=arraySymbol.getDimList();
+                dimList.add(1);
+                for(i=0;i<ctx.exp().size();i++){
+                    visit(ctx.exp(i));
+                    int value=nodeValue;
+                    dimList.add(value);
+                    System.out.print(String.format("[%d x ",value));
+                }
+                System.out.print("i32");
+                for(i=0;i<ctx.exp().size();i++){
+                    System.out.print("]");
+                }
+                System.out.print(String.format("* %%t%d",paramReg));
+                paramSymList.add(arraySymbol);
+                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+            }
+        }
+        else {
+            visit(ctx.ident());
+            String funcParamName=name;
+            int paramReg=regNumList.get(regNumList.size()-1);
+            System.out.print(String.format("i32 %%t%d",paramReg));
+            paramSymList.add(new Symbol(funcParamName,"var",paramReg));
+            regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+        }
+        return null;
+    }
+
+    @Override
     public Void visitBlock(sysyParser.BlockContext ctx) {
         ArrayList<Symbol> blockSym= new ArrayList<>();
         this.symStack.push(blockSym);
 //        this.regNumList.add(1);
         int i=0;
+        if(haveParam){
+            curFunc.setParamList(paramSymList);
+            for(i=0;i<paramSymList.size();i++){
+                Symbol paramSym=paramSymList.get(i);
+                blockSym.add(paramSym);
+                if(paramSym.getType().equals("var")){
+                    //变量
+                    int paramReg=regNumList.get(regNumList.size()-1);
+                    System.out.println(String.format("%%t%d = alloca i32",paramReg));
+                    System.out.println(String.format("store i32 %%t%d, i32* %%t%d",paramSym.getRegNum(),paramReg));
+                    paramSym.setRegNum(paramReg);
+                    regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+
+                }
+                else if(paramSym.getDimension()==1){
+                    //一维数组
+                    int paramReg=regNumList.get(regNumList.size()-1);
+                    System.out.println(String.format("%%t%d = alloca i32*",paramReg));
+                    System.out.println(String.format("store i32* %%t%d, i32* * %%t%d",paramSym.getRegNum(),paramReg));
+                    paramSym.setRegNum(paramReg);
+                    regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                }
+                else {
+                    //二维数组
+                    int paramReg=regNumList.get(regNumList.size()-1);
+                    System.out.print(String.format("%%t%d = alloca ",paramReg));
+                    ArrayList<Integer> dimList=paramSym.getDimList();
+                    //从1开始，第一维未知
+                    for(i=1;i<dimList.size();i++){
+                        System.out.print(String.format("[%d x ",dimList.get(i)));
+                    }
+                    System.out.print("i32");
+                    for(i=1;i<dimList.size();i++){
+                        System.out.print("]");
+                    }
+                    System.out.println("*");
+                    //store部分
+                    System.out.print("store ");
+                    for(i=1;i<dimList.size();i++){
+                        System.out.print(String.format("[%d x ",dimList.get(i)));
+                    }
+                    System.out.print("i32");
+                    for(i=1;i<dimList.size();i++){
+                        System.out.print("]");
+                    }
+                    System.out.print(String.format("* %%t%d,",paramSym.getRegNum()));
+                    for(i=1;i<dimList.size();i++){
+                        System.out.print(String.format("[%d x ",dimList.get(i)));
+                    }
+                    System.out.print("i32");
+                    for(i=1;i<dimList.size();i++){
+                        System.out.print("]");
+                    }
+                    System.out.println(String.format("* * %%t%d",paramReg));
+                    paramSym.setRegNum(paramReg);
+                    regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                }
+            }
+        }
+        haveParam=false;
         for(i=0;i<ctx.blockitem().size();i++){
             visit(ctx.blockitem().get(i));
         }
@@ -701,13 +855,22 @@ public class Visitor extends sysyBaseVisitor<Void>{
         else if(ctx.RETURN()!=null){
 //            useReg=false;
             visit(ctx.exp());
-            System.out.print("ret i32 ");
-            if(useReg){
-                int retReg=regNumList.get(regNumList.size()-1)-1;
-                System.out.println(String.format("%%t%d",retReg));
+            System.out.print("ret ");
+            if(ctx.exp()!=null){
+                System.out.print("i32 ");
+                if(isVoid){
+                    System.exit(-1);
+                }
+                else if(useReg){
+                    int retReg=regNumList.get(regNumList.size()-1)-1;
+                    System.out.println(String.format("%%t%d",retReg));
+                }
+                else {
+                    System.out.println(nodeValue);
+                }
             }
             else {
-                System.out.println(nodeValue);
+                System.out.print("void");
             }
         }
         else if(ctx.IF()!=null){
@@ -775,16 +938,65 @@ public class Visitor extends sysyBaseVisitor<Void>{
     @Override
     public Void visitLval(sysyParser.LvalContext ctx) {
         this.name="";
-        if(ctx.LBRACKET(0)!=null){
+        if(ctx.LBRACKET(0)!=null||getArray(ctx.ident().IDENT().getText())!=null){
             //数组特判
             int i,j,base;
             String identName=ctx.ident().IDENT().getText();
             int varReg=getReg(identName);
             Symbol thisSymbol;
+            Symbol ifParam=searchParamArray(identName);
             //load数组
-            if(varReg==-1){
-                //全局
+            if(ifParam!=null){
+                //特判参数数组
+                thisSymbol=ifParam;
+                int loadReg=regNumList.get(regNumList.size()-1);
+                ArrayList<Integer> dimList=thisSymbol.getDimList();
+                System.out.print(String.format("%%t%d = load ",loadReg));
+                for(i=1;i<dimList.size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
+                }
+                System.out.print("i32");
+                for(i=1;i<dimList.size();i++){
+                    System.out.print("]");
+                }
+                System.out.print("* ,");
+                for(i=1;i<dimList.size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
+                }
+                System.out.print("i32");
+                for(i=1;i<dimList.size();i++){
+                    System.out.print("]");
+                }
+                System.out.println(String.format("* * %%t%d",thisSymbol.getRegNum()));
+                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                int setReg = regNumList.get(regNumList.size()-1);
+                System.out.print(String.format("%%t%d = getelementptr ",setReg));
+                for(i=1;i<dimList.size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
+                }
+                System.out.print("i32");
+                for(i=1;i<dimList.size();i++){
+                    System.out.print("]");
+                }
+                System.out.print(",");
+                for(i=1;i<dimList.size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
+                }
+                System.out.print("i32");
+                for(i=1;i<dimList.size();i++){
+                    System.out.print("]");
+                }
+                System.out.println(String.format("* %%t%d, i32 0",loadReg));
+                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                base=setReg;
+            }
+            else {
                 Symbol arraySymbol=getGlobalArray(identName);
+                boolean isGlobal=true;
+                if(arraySymbol==null){
+                    arraySymbol=getArray(identName);
+                    isGlobal=false;
+                }
                 thisSymbol=arraySymbol;
                 //假定都没有存basePointer
                 int setReg = regNumList.get(regNumList.size()-1);
@@ -806,20 +1018,19 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 for(i=0;i<dimList.size();i++){
                     System.out.print("]");
                 }
-                System.out.print(String.format("* @%s",arraySymbol.getSymName()));
-                for(i=0;i<arraySymbol.getDimension()+1;i++){
+                if(isGlobal){
+                    System.out.print(String.format("* @%s",arraySymbol.getSymName()));
+                }
+                else {
+                    System.out.print(String.format("* %%t%d",arraySymbol.getRegNum()));
+                }
+                for(i=0;i<ctx.LBRACKET().size()+1;i++){
                     System.out.print(", i32 0");
                 }
                 System.out.println();
                 arraySymbol.setBasePointer(setReg);
                 regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
                 //获取basePointer
-                base=arraySymbol.getBasePointer();
-            }
-            else {
-                //局部,应该都存了
-                Symbol arraySymbol=getArray(identName);
-                thisSymbol=arraySymbol;
                 base=arraySymbol.getBasePointer();
             }
             //获取基地址后，计算偏移量
@@ -829,8 +1040,8 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 dimAll*=dimList.get(i);
             }
             if(ctx.LBRACKET().size()!=thisSymbol.getDimension()){
-                //必须是元素
-                System.exit(-1);
+                //不是元素不load
+                shouldLoad=false;
             }
             //计数基准寄存器，值为0
             int cntBase=regNumList.get(regNumList.size()-1);
@@ -858,7 +1069,53 @@ public class Visitor extends sysyBaseVisitor<Void>{
             }
             //bias
             int biasReg=regNumList.get(regNumList.size()-1);
-            System.out.println(String.format("%%t%d = getelementptr i32, i32* %%t%d, i32 %%t%d",biasReg,base,cntBase));
+            if(ifParam!=null){
+                //特判参数数组偏移
+                System.out.print(String.format("%%t%d = getelementptr ",biasReg));
+                for(i=1;i<dimList.size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
+                }
+                System.out.print("i32");
+                for(i=1;i<dimList.size();i++){
+                    System.out.print("]");
+                }
+                System.out.print(",");
+                for(i=1;i<dimList.size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
+                }
+                System.out.print("i32");
+                for(i=1;i<dimList.size();i++){
+                    System.out.print("]");
+                }
+                System.out.print(String.format("* %%t%d",base));
+                for(i=1;i<dimList.size();i++){
+                    System.out.print(",i32 0");
+                }
+                System.out.println(String.format(",i32 %%t%d",cntBase));
+            }
+            else {
+                System.out.print(String.format("%%t%d = getelementptr ",biasReg));
+                for(i=ctx.LBRACKET().size();i<dimList.size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
+                }
+                System.out.print("i32");
+                for(i=ctx.LBRACKET().size();i<dimList.size();i++){
+                    System.out.print("]");
+                }
+                System.out.print(",");
+                for(i=ctx.LBRACKET().size();i<dimList.size();i++){
+                    System.out.print(String.format("[%d x ",dimList.get(i)));
+                }
+                System.out.print("i32");
+                for(i=ctx.LBRACKET().size();i<dimList.size();i++){
+                    System.out.print("]");
+                }
+                System.out.print(String.format("* %%t%d",base));
+                for(i=ctx.LBRACKET().size();i<dimList.size();i++){
+                    System.out.print(",i32 0");
+                }
+                System.out.println(String.format(",i32 %%t%d",cntBase));
+            }
             regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
         }
         else {
@@ -1065,7 +1322,15 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
             }
             else if(funcName.equals("getarray")){
-                System.out.println("declare i32 @getarray(i32*)");
+                if(ctx.funcrparams().children.size()!=1){
+                    System.exit(-1);
+                }
+                visit(ctx.funcrparams().exp(0));
+                isReg=true;
+                useReg=true;
+                register_num=regNumList.get(regNumList.size()-1);
+                System.out.println(String.format("%%t%d = call i32 @getarray(i32 * %%t%d)",register_num,register_num-1));
+                regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
             }
             else if(funcName.equals("putint")){
                 if(ctx.funcrparams() ==null || ctx.funcrparams().children.size()>1){
@@ -1087,7 +1352,6 @@ public class Visitor extends sysyBaseVisitor<Void>{
                     System.exit(-1);
                 }
                 isReg=false;
-//                useReg=false;
                 visit(ctx.funcrparams());
                 if(useReg){
                     register_num=regNumList.get(regNumList.size()-1)-1;
@@ -1098,7 +1362,87 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 }
             }
             else if(funcName.equals("putarray")){
-                System.out.println("declare void @putarray(i32,i32*)");
+                if(ctx.funcrparams().exp().size()!=2||ctx.funcrparams()==null){
+                    System.exit(-1);
+                }
+                int lenValue=0,lenReg=0,arrayReg;
+                visit(ctx.funcrparams().exp(0));
+                boolean lenUse=useReg;
+                if(lenUse){
+                    lenReg=regNumList.get(regNumList.size()-1)-1;
+                }
+                else {
+                    lenValue=nodeValue;
+                }
+                visit(ctx.funcrparams().exp(1));
+                arrayReg=regNumList.get(regNumList.size()-1)-1;
+                //调用
+                if(lenUse){
+                    System.out.println(String.format("call void @putarray(i32 %%t%d,i32* %%t%d)",lenReg,arrayReg));
+                }
+                else {
+                    System.out.println(String.format("call void @putarray(i32 %d,i32* %%t%d)",lenValue,arrayReg));
+                }
+            }
+            else {
+                int i,j;
+                FuncSymbol thisFunc=searchFunc(funcName);
+                if(thisFunc==null){
+                    System.exit(-1);
+                }
+                ArrayList<Integer> regList=new ArrayList<>();
+                ArrayList<Integer> valueList=new ArrayList<>();
+                if(ctx.funcrparams()!=null){
+                    for(i=0;i<ctx.funcrparams().exp().size();i++){
+                        visit(ctx.funcrparams().exp(i));
+                        if(useReg){
+                            regList.add(regNumList.get(regNumList.size()-1)-1);
+                            valueList.add(0);
+                        }
+                        else {
+                            regList.add(-1);
+                            valueList.add(nodeValue);
+                        }
+                    }
+                }
+                if(isVoid){
+                    System.out.print(String.format("call void @%s(",funcName));
+                }
+                else {
+                    int retReg=regNumList.get(regNumList.size()-1);
+                    useReg=true;
+                    System.out.print(String.format("%%t%d = call i32 @%s(",retReg,funcName));
+                    regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
+                }
+                ArrayList<Symbol> paramList=thisFunc.getParamList();
+                for(i=0;i<regList.size();i++){
+                    Symbol paramSymbol=paramList.get(i);
+                    if(paramSymbol.getType().equals("var")){
+                        if(regList.get(i)!=-1){
+                            System.out.print(String.format("i32 %%t%d",regList.get(i)));
+                        }
+                        else {
+                            System.out.print(String.format("i32 %d",valueList.get(i)));
+                        }
+                    }
+                    else if(paramSymbol.getDimension()==1){
+                        System.out.print(String.format("i32* %%t%d",regList.get(i)));
+                    }
+                    else {
+                        for(j=1;j<paramSymbol.getDimList().size();j++){
+                            System.out.print(String.format("[%d x ",paramSymbol.getDimList().get(j)));
+                        }
+                        System.out.print("i32");
+                        for(j=1;j<paramSymbol.getDimList().size();j++){
+                            System.out.print("]");
+                        }
+                        System.out.print(String.format("* %%t%d",regList.get(i)));
+                    }
+                    if(i!=regList.size()-1){
+                        System.out.print(",");
+                    }
+                }
+                System.out.println(")");
             }
         }
         else {
@@ -1151,12 +1495,20 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 String identName=ctx.lval().ident().IDENT().getText();
                 int varReg=getReg(identName);
                 register_num = regNumList.get(regNumList.size()-1);
-                if(ctx.lval().LBRACKET(0)!=null){
+                if(ctx.lval().LBRACKET(0)!=null||getArray(ctx.lval().ident().IDENT().getText())!=null){
+                    //数组
+                    shouldLoad=true;
                     visit(ctx.lval());
-                    isReg=true;
-                    useReg=true;
-                    register_num = regNumList.get(regNumList.size()-1);
-                    System.out.println(String.format("%%t%d = load i32, i32* %%t%d", register_num, register_num-1));
+                    if(shouldLoad){
+                        isReg=true;
+                        useReg=true;
+                        register_num = regNumList.get(regNumList.size()-1);
+                        System.out.println(String.format("%%t%d = load i32, i32* %%t%d", register_num, register_num-1));
+                    }
+                    else {
+                        //不load，就不用寄存器+1
+                        regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)-1);
+                    }
                 }
                 else if(varReg==-1){
                     String gloReg=getGlobalReg(identName);
@@ -1507,7 +1859,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
         for (i=symStack.size()-1;i>=0;i--){
             ArrayList<Symbol> tmp=symStack.get(i);
             for(j=tmp.size()-1;j>=0;j--){
-                if(str.equals(tmp.get(j).getSymName())){
+                if(str.equals(tmp.get(j).getSymName())&&(tmp.get(j).getType().equals("var array")||tmp.get(j).getType().equals("const array"))){
                     return tmp.get(j);
                 }
             }
@@ -1563,5 +1915,27 @@ public class Visitor extends sysyBaseVisitor<Void>{
         }
     }
 
+    public Symbol searchParamArray(String str){
+        int i,j;
+        for (i=symStack.size()-1;i>=0;i--){
+            ArrayList<Symbol> tmp=symStack.get(i);
+            for(j=tmp.size()-1;j>=0;j--){
+                if(str.equals(tmp.get(j).getSymName())&&tmp.get(j).getType().equals("var param array")){
+                    return tmp.get(j);
+                }
+            }
+        }
+        return null;
+    }
+
+    public FuncSymbol searchFunc(String str){
+        int i;
+        for(i=0;i<funcList.size();i++){
+            if(str.equals(funcList.get(i).getFuncName())){
+                return funcList.get(i);
+            }
+        }
+        return null;
+    }
 
 }

@@ -55,12 +55,6 @@ public class PreVisit extends sysyBaseVisitor<Void>{
                 System.out.println("declare void @putarray(i32,i32*)");
                 flag6=true;
             }
-            else if(flag1||flag2||flag3||flag4||flag5||flag6){
-
-            }
-            else {
-                System.exit(-1);
-            }
             return null;
         }
         else {

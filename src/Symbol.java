@@ -8,6 +8,10 @@ public class Symbol {
     private int dimension;
     private int basePointer;
 
+    public void setRegNum(int regNum) {
+        this.regNum = regNum;
+    }
+
     public int getBasePointer() {
         return basePointer;
     }

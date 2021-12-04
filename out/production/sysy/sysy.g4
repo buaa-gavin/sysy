@@ -41,7 +41,7 @@ WHITE_SPACE: [ \t\r\n] -> skip;
 
 
 //语法
-compunit     : (decl)* funcdef;
+compunit     : (decl | funcdef) | compunit (decl | funcdef);
 decl         : constdecl | vardecl;
 constdecl    : CONST btype constdef ( DOT constdef )* SEMI;
 btype        : INT;
