@@ -76,7 +76,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
             String constGlobalName=name;
             if(ctx.LBRACKET(0)!=null){
                 //数组
-                Symbol constArraySymbol=new Symbol(constGlobalName,"const array",-1);
+                Symbol constArraySymbol=new Symbol(constGlobalName,"const global array",-1);
                 int dimension=ctx.LBRACKET().size();
                 constArraySymbol.setDimension(dimension);
                 ArrayList<Integer> dimList=constArraySymbol.getDimList();
@@ -350,7 +350,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
             String globalVarName=name;
             if(ctx.LBRACKET(0)!=null){
                 //数组
-                Symbol globalArraySymbol=new Symbol(globalVarName,"var array",-1);
+                Symbol globalArraySymbol=new Symbol(globalVarName,"var global array",-1);
                 int dimension=ctx.LBRACKET().size();
                 globalArraySymbol.setDimension(dimension);
                 ArrayList<Integer> dimList=globalArraySymbol.getDimList();
@@ -864,9 +864,9 @@ public class Visitor extends sysyBaseVisitor<Void>{
         }
         else if(ctx.RETURN()!=null){
 //            useReg=false;
-            System.out.print("ret ");
             if(ctx.exp()!=null){
                 visit(ctx.exp());
+                System.out.print("ret ");
                 System.out.print("i32 ");
                 if(isVoid){
                     System.exit(-1);
@@ -880,6 +880,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 }
             }
             else {
+                System.out.print("ret ");
                 System.out.print("void");
             }
         }
@@ -948,7 +949,8 @@ public class Visitor extends sysyBaseVisitor<Void>{
     @Override
     public Void visitLval(sysyParser.LvalContext ctx) {
         this.name="";
-        if(ctx.LBRACKET(0)!=null||getArray(ctx.ident().IDENT().getText())!=null){
+        if(ctx.LBRACKET(0)!=null||getArray(ctx.ident().IDENT().getText())!=null
+        ||getGlobalArray(ctx.ident().IDENT().getText())!=null){
             //数组特判
             int i,j,base;
             String identName=ctx.ident().IDENT().getText();
@@ -1505,7 +1507,8 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 String identName=ctx.lval().ident().IDENT().getText();
                 int varReg=getReg(identName);
                 register_num = regNumList.get(regNumList.size()-1);
-                if(ctx.lval().LBRACKET(0)!=null||getArray(ctx.lval().ident().IDENT().getText())!=null){
+                if(ctx.lval().LBRACKET(0)!=null||getArray(ctx.lval().ident().IDENT().getText())!=null
+                ||getGlobalArray(ctx.lval().ident().IDENT().getText())!=null){
                     //数组
                     shouldLoad=true;
                     visit(ctx.lval());
@@ -1872,7 +1875,8 @@ public class Visitor extends sysyBaseVisitor<Void>{
     public Symbol getGlobalArray(String str){
         int i;
         for(i=globalSym.size()-1;i>=0;i--){
-            if(str.equals(globalSym.get(i).getSymName())){
+            if(str.equals(globalSym.get(i).getSymName())&&(globalSym.get(i).getType().equals("const global array")||
+                    globalSym.get(i).getType().equals("var global array"))){
                 return globalSym.get(i);
             }
         }
