@@ -881,7 +881,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
             }
             else {
                 System.out.print("ret ");
-                System.out.print("void");
+                System.out.println("void");
             }
         }
         else if(ctx.IF()!=null){

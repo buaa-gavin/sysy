@@ -8,7 +8,7 @@ public class PreVisit extends sysyBaseVisitor<Void>{
 
     @Override
     public Void visitConstdef(sysyParser.ConstdefContext ctx){
-        if(ctx.LBRACKET()!=null && !flagArray){
+        if(ctx.LBRACKET(0)!=null && !flagArray){
             System.out.println("declare void @memset(i32*, i32, i32)");
             flagArray=true;
         }
@@ -17,7 +17,7 @@ public class PreVisit extends sysyBaseVisitor<Void>{
 
     @Override
     public Void visitVardef(sysyParser.VardefContext ctx){
-        if(ctx.LBRACKET()!=null && !flagArray){
+        if(ctx.LBRACKET(0)!=null && !flagArray){
             System.out.println("declare void @memset(i32*, i32, i32)");
             flagArray=true;
             return null;
@@ -29,7 +29,10 @@ public class PreVisit extends sysyBaseVisitor<Void>{
 
     @Override
     public Void visitUnaryexp(sysyParser.UnaryexpContext ctx){
-        if(ctx.LPAREN()!=null){
+        if(ctx.children.size()==1){
+            visit(ctx.primaryexp());
+        }
+        else if(ctx.LPAREN()!=null){
             visit(ctx.ident());
             if(name.equals("getint")&&!flag1){
                 System.out.println("declare i32 @getint()");
@@ -55,11 +58,12 @@ public class PreVisit extends sysyBaseVisitor<Void>{
                 System.out.println("declare void @putarray(i32,i32*)");
                 flag6=true;
             }
-            return null;
         }
         else {
-            return super.visitUnaryexp(ctx);
+            visit(ctx.unaryop());
+            visit(ctx.unaryexp());
         }
+        return null;
     }
 
     @Override
