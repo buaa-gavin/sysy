@@ -1737,6 +1737,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
             condReg=regNumList.get(regNumList.size()-1);
             System.out.println(String.format("%%t%d = alloca i1",condReg));
             System.out.println(String.format("store i1 %%t%d, i1* %%t%d",shortReg,condReg));
+            regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
             System.out.println(String.format("br i1 %%t%d,label %%t%d,label %%t%d",shortReg,ifReg,retReg));
             System.out.println(String.format("t%d:",ifReg));
             singleBool=true;
