@@ -656,6 +656,10 @@ public class Visitor extends sysyBaseVisitor<Void>{
         }
         System.out.print(")");
         System.out.println("{");
+        //短路求值用
+        condReg=regNumList.get(regNumList.size()-1);
+        System.out.println(String.format("%%t%d = alloca i1",condReg));
+        regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
         visit(ctx.block());
         //占位
         if(!isVoid){
@@ -808,10 +812,6 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 }
             }
         }
-        //短路求值用
-        condReg=regNumList.get(regNumList.size()-1);
-        System.out.println(String.format("%%t%d = alloca i1",condReg));
-        regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
         haveParam=false;
         for(i=0;i<ctx.blockitem().size();i++){
             visit(ctx.blockitem().get(i));
