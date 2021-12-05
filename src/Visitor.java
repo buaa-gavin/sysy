@@ -808,6 +808,10 @@ public class Visitor extends sysyBaseVisitor<Void>{
                 }
             }
         }
+        //短路求值用
+        condReg=regNumList.get(regNumList.size()-1);
+        System.out.println(String.format("%%t%d = alloca i1",condReg));
+        regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
         haveParam=false;
         for(i=0;i<ctx.blockitem().size();i++){
             visit(ctx.blockitem().get(i));
@@ -1734,10 +1738,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
             System.out.println(String.format("%%t%d = icmp ne i1 %%t%d, 0",shortReg,leftReg));
             int ifReg=shortReg+1,retReg=shortReg+2;
             regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+3);
-            condReg=regNumList.get(regNumList.size()-1);
-            System.out.println(String.format("%%t%d = alloca i1",condReg));
             System.out.println(String.format("store i1 %%t%d, i1* %%t%d",shortReg,condReg));
-            regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
             System.out.println(String.format("br i1 %%t%d,label %%t%d,label %%t%d",shortReg,ifReg,retReg));
             System.out.println(String.format("t%d:",ifReg));
             singleBool=true;
@@ -1780,10 +1781,7 @@ public class Visitor extends sysyBaseVisitor<Void>{
             System.out.println(String.format("%%t%d = icmp ne i1 %%t%d, 0",shortReg,leftReg));
             int ifReg=shortReg+1,retReg=shortReg+2;
             regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+3);
-            condReg=regNumList.get(regNumList.size()-1);
-            System.out.println(String.format("%%t%d = alloca i1",condReg));
             System.out.println(String.format("store i1 %%t%d, i1* %%t%d",shortReg,condReg));
-            regNumList.set(regNumList.size()-1, regNumList.get(regNumList.size()-1)+1);
             System.out.println(String.format("br i1 %%t%d,label %%t%d,label %%t%d",shortReg,ifReg,retReg));
             System.out.println(String.format("t%d:",retReg));
             visit(ctx.landexp());
